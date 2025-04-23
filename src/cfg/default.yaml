@@ -1,0 +1,4 @@
+dirs: # 目录配置
+  data_dir: "datasets" # 训练数据目录
+  runs_dir: "runs" # 实验目录，如果未设置，project 和 name 参数，实验将保存至 runs 目录下
+  

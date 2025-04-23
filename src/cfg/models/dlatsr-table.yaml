@@ -1,0 +1,12 @@
+name: "get_dlatsr" # Name of the function to be called
+
+params:
+  heads:
+    hm: 2 # 热力图
+    reg: 2 # 单元格角点和中心点偏移量
+    ct2cn: 8 # 中心点向量：中心点坐标 - 角点坐标
+    cn2ct: 8 # 角点向量：角点坐标 - 中心点坐标
+    lc: 2 # 单元格逻辑坐标
+
+  head_conv: 256 # 头部隐藏层数
+
