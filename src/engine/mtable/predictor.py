@@ -21,12 +21,12 @@ class MTablePredictor(TablePredictor):
 
     def process(self, input, meta, *args, **kwargs):
         with torch.no_grad():
-            # 模型推理
+            # Model inference
             outputs = self.model(input)
 
             output = outputs[-1]
 
-            # 获取模型推理输出层
+            # Obtain the model inference output layer
             hm = output["hm"].sigmoid_()
             reg = output["reg"]
             ct2cn = output["ct2cn"]
@@ -34,13 +34,13 @@ class MTablePredictor(TablePredictor):
             lc = output["lc"]
             sp = output["sp"]
 
-            # 输出推理结果图
+            # Output the inference result graph
             np.save(os.path.join(self.args.save_dir, meta["image_name"]), lc.detach().cpu()[0].numpy())
 
-            # 单元格分数是否被修改，被修改则重新排序
+            # Cell fractions are reordered if they are modified
             is_modify = False
 
-            # 单元格物理坐标解码
+            # Decoding of cell physical coordinates
             if self.args.not_relocate:
                 cells, cells_scores, logic_coords, *rets = simple_cells_decode(hm, reg, ct2cn, cn2ct, lc, sp, self.args.center_k, self.args.corner_k, self.args.center_thresh, self.args.save_corners)
             else:
@@ -48,7 +48,7 @@ class MTablePredictor(TablePredictor):
                     hm, reg, ct2cn, cn2ct, lc, sp, self.args.center_k, self.args.corner_k, self.args.center_thresh, self.args.corner_thresh, self.args.save_corners
                 )
 
-                # 根据单元格的角点优化次数降低其评分
+                # Reduce the score of a cell based on the number of times it is optimized for corners
                 for i in range(cells.size(1)):
                     if cells_scores[0, i, 0] < self.args.center_thresh:
                         break
@@ -57,13 +57,13 @@ class MTablePredictor(TablePredictor):
                         cells_scores[0, i, 0] *= self.cell_decay_thresh
                         is_modify = True
 
-            # 合并输出
+            # Merge outputs
             detections = torch.cat([cells, cells_scores, logic_coords], dim=2)
 
-            # 如果修改了score则重新排序
+            # If the score is modified, the order will be reordered
             if is_modify:
                 _, sorted_inds = torch.sort(cells_scores, descending=True, dim=1)
                 detections = detections.gather(1, sorted_inds.expand_as(detections))
 
-            # 返回检测结果
+            # Returns the test result
             return detections, rets[0] if self.args.save_corners else None, meta

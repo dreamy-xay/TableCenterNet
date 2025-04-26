@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-Description: 
-Version: 
+Description:
+Version:
 Autor: dreamy-xay
 Date: 2024-10-22 10:35:11
 LastEditors: dreamy-xay
@@ -29,38 +29,38 @@ class TableArgParser(BaseArgParser):
 
     def add_predict_args(self, parser):
         parser.add_argument("--resolution", type=int, default=0, help="The resolution of the input image during inference. When it is 0, it means using the default resolution of the prediction code.")
-        parser.add_argument("--center_k", type=int, default=3000, help="")
-        parser.add_argument("--corner_k", type=int, default=5000, help="")
-        parser.add_argument("--center_thresh", type=float, default=0.2, help="")
-        parser.add_argument("--corner_thresh", type=float, default=0.3, help="")
-        parser.add_argument("--nms", action="store_true", help="")
-        parser.add_argument("--iou_thresh", type=float, default=0.5, help="")
-        parser.add_argument("--save_corners", action="store_true", help="")
-        parser.add_argument("--padding", type=int, default=0, help="")
+        parser.add_argument("--center_k", type=int, default=3000, help="The maximum number of center points.")
+        parser.add_argument("--corner_k", type=int, default=5000, help="The maximum number of corners.")
+        parser.add_argument("--center_thresh", type=float, default=0.2, help="TopK threshold at the center point.")
+        parser.add_argument("--corner_thresh", type=float, default=0.3, help="Corner TopK threshold.")
+        parser.add_argument("--nms", action="store_true", help="Whether to enable NMS.")
+        parser.add_argument("--iou_thresh", type=float, default=0.5, help="IoU threshold for NMS.")
+        parser.add_argument("--save_corners", action="store_true", help="Whether to save the corner image.")
+        parser.add_argument("--padding", type=int, default=0, help="Enter whether the image needs to be bounded in all four directions.")
 
     def add_val_args(self, parser):
         parser.add_argument("--resolution", type=int, default=0, help="The resolution of the input image during inference. When it is 0, it means using the default resolution of the prediction code.")
-        parser.add_argument("--center_k", type=int, default=3000, help="")
-        parser.add_argument("--corner_k", type=int, default=5000, help="")
-        parser.add_argument("--center_thresh", type=float, default=0.2, help="")
-        parser.add_argument("--corner_thresh", type=float, default=0.3, help="")
-        parser.add_argument("--nms", action="store_true", help="")
-        parser.add_argument("--iou_thresh", type=float, default=0.5, help="")
-        parser.add_argument("--evaluate_ious", type=str, default="0.5,0.6,0.7,0.8,0.9,0.95", help="")
-        parser.add_argument("--evaluate_poly_iou", action="store_true", help="")
-        parser.add_argument("--padding", type=int, default=0, help="")
+        parser.add_argument("--center_k", type=int, default=3000, help="The maximum number of center points.")
+        parser.add_argument("--corner_k", type=int, default=5000, help="The maximum number of corners.")
+        parser.add_argument("--center_thresh", type=float, default=0.2, help="TopK threshold at the center point.")
+        parser.add_argument("--corner_thresh", type=float, default=0.3, help="Corner TopK threshold.")
+        parser.add_argument("--nms", action="store_true", help="Whether to enable NMS.")
+        parser.add_argument("--iou_thresh", type=float, default=0.5, help="IoU threshold for NMS.")
+        parser.add_argument("--evaluate_ious", type=str, default="0.5,0.6,0.7,0.8,0.9,0.95", help="IoU that needs to be assessed at the time of assessment.")
+        parser.add_argument("--evaluate_poly_iou", action="store_true", help="Whether to evaluate the polygon IoU or not the rectangular IoU.")
+        parser.add_argument("--padding", type=int, default=0, help="Enter whether the image needs to be bounded in all four directions.")
 
     def parse_train_args(self, args):
-        # 设置学习率衰减步数，指定步数学习率衰减10倍
+        # Set the number of steps to attenuate the learning rate, and specify the number of steps to reduce the learning rate by 10 times
         args.lr_step = [int(i) for i in args.lr_step.split(",")]
 
     def parse_predict_args(self, args):
         if args.save_corners:
-            # 设置实验中角点图的保存路径
+            # Set the path to save the corner plot in the experiment
             self.args.save_corners_dir = os.path.join(self.args.save_shows_dir, "corners")
-            # 创建目录
+            # Create a directory
             os.makedirs(self.args.save_corners_dir, exist_ok=True)
 
     def parse_val_args(self, args):
-        # 解析评估IOU阈值
+        # Parse and evaluate the IOU threshold
         args.evaluate_ious = [float(i) for i in args.evaluate_ious.split(",")]

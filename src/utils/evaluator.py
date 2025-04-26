@@ -55,16 +55,16 @@ class TableStructEvaluator(BaseEvaluator):
 
         try:
             return TEDS(structure_only=True, ignore_nodes=ignore_nodes)(self.pred_table_structure, self.gt_table_structure)
-        except:  # gt 不存在表格：如果预测也不存在表格则返回1.0，否则返回0.0
+        except:  # gt Table does not exist: 1.0 is returned if the prediction also does not have a table, otherwise 0.0 is returned
             return float(self.pred_table_structure == self.gt_table_structure)
 
     @staticmethod
     def calculate_bleu(reference, candidate):
-        """计算两个HTML序列之间的BLEU分数"""
+        """Calculate the BLEU score between two HTML sequences"""
         reference_tokens = [re.findall(r"<[^>]+>|[^<]+", reference)]
         candidate_tokens = re.findall(r"<[^>]+>|[^<]+", candidate)
 
-        # 计算BLEU分数，使用4-gram
+        # Calculate the BLEU score using a 4-gram
         smoothie = SmoothingFunction().method6
         bleu_score = sentence_bleu(reference_tokens, candidate_tokens, smoothing_function=smoothie)
 
@@ -72,24 +72,24 @@ class TableStructEvaluator(BaseEvaluator):
 
     """ multitable
     def __init__(self, pred_tables, gt_tables):
-        # 总共单元格数目
+        # The total number of cells
         self.num_pred_cells = sum([len(cells) for cells in pred_tables])
         self.num_gt_cells = sum([len(cells) for cells in gt_tables])
 
-        # 获取排序后的 tables
+        # Get the sorted tables
         self.pred_tables, self.gt_tables, self.pred_table_bboxes, self.gt_table_bboxes = self._get_sorted_tables(pred_tables, gt_tables)
 
     def evaluate(self, ignore_nodes=None, table_iou_threshold=0.7):
-        # 匹配表格列表
+        # List of matching tables
         table_pairs = self._match_tables(self.gt_table_bboxes, self.pred_table_bboxes, table_iou_threshold)
 
-        # 初始化 TEDS
+        # Initialize TEDS
         teds = TEDS(structure_only=True, ignore_nodes=ignore_nodes)
 
-        # 总分数（加权平均）
+        # Total score (weighted average)
         p_score, r_sorce = 0.0, 0.0
 
-        # 评估所有表格
+        # Evaluate all forms
         for gt_i, pred_i in table_pairs:
             gt_cells = self.gt_tables[gt_i]
             pred_cells = self.pred_tables[pred_i]
@@ -110,11 +110,11 @@ class TableStructEvaluator(BaseEvaluator):
 
     @staticmethod
     def _get_sorted_tables(pred_tables, gt_tables):
-        # 计算对应表格bbox
+        # Calculate the corresponding table bbox
         pred_table_bboxes = [TableStructEvaluator._get_table_bbox(table) for table in pred_tables]
         gt_table_bboxes = [TableStructEvaluator._get_table_bbox(table) for table in gt_tables]
 
-        # 重新按照面积重大到小排序
+        # Re-sort by area from largest to smallest
         sorted_pred_bboxes = sorted(enumerate(pred_table_bboxes), key=lambda item: BoxEvaluator._calc_area(item[1]), reverse=True)
         pred_table_bboxes = [item[1] for item in sorted_pred_bboxes]
         pred_tables = [pred_tables[item[0]] for item in sorted_pred_bboxes]
@@ -129,7 +129,7 @@ class TableStructEvaluator(BaseEvaluator):
     def _match_tables(gt_table_bboxes, pred_table_bboxes, table_iou_threshold=0.7):
         table_pairs = []
 
-        # 计算交叠面积
+        # Calculate the overlapping area
         for i, gt_bbox in enumerate(gt_table_bboxes):
             gt_bbox_area = BoxEvaluator._calc_area(gt_bbox)
             for j, pred_bbox in enumerate(pred_table_bboxes):
@@ -154,7 +154,7 @@ class TableStructEvaluator(BaseEvaluator):
         if len(data) == 0:
             return "<html><body><table></table></body></html>"
 
-        # 根据工作表和合并单元格范围构建 HTML 表格
+        # Build an HTML table based on worksheets and merged cell ranges
         html = "<html><body>"
 
         rows = max(entry[1][1] for entry in data) + 1
@@ -190,21 +190,21 @@ class TableStructEvaluator(BaseEvaluator):
     @staticmethod
     def generate_html_by_structure(data, preview=False, empty_content=""):
         """
-        根据数据生成HTML表格
+        Generate HTML tables based on the data
 
         Args:
-            - data (list): 包含一个表格所有单元格数据，每个单元格是一个元组，包含行跨度、列跨度、内容和结构，例如：[[((start_col, end_col), (start_row, end_row), content)]]
-            - preview (bool): 是否生成预览表格，默认为False
-            - empty_content (str): 空单元格的内容，默认为空字符串
+            - data (list): contains all cell data in a table, each cell is a tuple, containing row span, column span, content, and structure, for example: [[(((start_col, end_col), (start_row, end_row), content)]]
+            - preview (bool): Whether to generate a preview table, which is set to False by default
+            - empty_content (str): The contents of an empty cell, which defaults to an empty string
 
         Returns:
-            - str: 生成的HTML表格字符串
+            - str: The generated HTML table string
 
         """
         if len(data) == 0:
             return "<html><body><table></table></body></html>"
 
-        # 根据工作表和合并单元格范围构建 HTML 表格
+        # Build an HTML table based on worksheets and merged cell ranges
         if preview:
             html = "<html><style> table { border-right: 1px solid #000000; border-bottom: 1px solid #000000; text-align: center; } table th { border-left: 1px solid #000000; border-top: 1px solid #000000; } table td { border-left: 1px solid #000000; border-top: 1px solid #000000; } </style><body>"
         else:
@@ -217,14 +217,14 @@ class TableStructEvaluator(BaseEvaluator):
         table_content = [[empty_content for _ in range(cols)] for _ in range(rows)]
         table_stucture = [[() for _ in range(cols)] for _ in range(rows)]
 
-        # 遍历数据并填充单元格
+        # Traverse the data and populate the cells
         for colspan, rowspan, content in data:
             start_col = colspan[0]
             end_col = colspan[1]
             start_row = rowspan[0]
             end_row = rowspan[1]
 
-            # 填充合并单元格
+            # Fill merged cells
             try:
                 for row in range(start_row, end_row + 1):
                     for col in range(start_col, end_col + 1):
@@ -235,7 +235,7 @@ class TableStructEvaluator(BaseEvaluator):
             except:
                 print(start_row, end_row, start_col, end_col, rows, cols)
 
-        # 合并空白
+        # Merge blanks
         for row in range(rows):
             start_col = None
             col_ranges = []
@@ -261,7 +261,7 @@ class TableStructEvaluator(BaseEvaluator):
             html += "<tr>"
             for col in range(cols):
                 content = table_content[row][col]
-                # 查找是否包含在合并范围内
+                # Find out if it's included in the merge scope
                 if table[row][col] > 0:
                     if table[row][col] == 2:
                         rowspan, colspan = table_stucture[row][col]
@@ -298,7 +298,7 @@ class BoxEvaluator(BaseEvaluator):
 
         # print(f"Predict: {len(self.pred_boxes)}, GroundTruth: {len(self.gt_boxes)}")
 
-        # 计算所有预测框和真实框的交并比
+        # Calculate the intersection and union ratio of all prediction and real boxes
         self._calc_ious()
 
     def _calc_ious(self):
@@ -465,7 +465,7 @@ class TableCoordsEvaluator(BaseEvaluator):
                     #! test
                     # for k0, k1, k2 in [(0, 0, 1), (1, 2, 3)]:
                     #     if self.gt_cells[i][1][k1] == self.pred_cells[j][1][k1] and self.gt_cells[i][1][k2] == self.pred_cells[j][1][k2]:
-                    #         true_logical_coord_cr[k0] += 1
+                    #         true_logical_coord_cr[k0]  = 1
 
             evaluate_results[threshold]["L_Acc"] = true_logical_coords / true_physical_coords if true_physical_coords > 0 else 0.0
 
@@ -484,7 +484,7 @@ class TableCoordsEvaluator(BaseEvaluator):
         return evaluate_results
 
 
-# 物理坐标邻接关系
+# Physical coordinate adjacencies
 class PhyAdjRelationEvaluator(BaseEvaluator):
     NONE = 0
     TOP = 1
@@ -506,7 +506,7 @@ class PhyAdjRelationEvaluator(BaseEvaluator):
     def evaluate(self, iou_thresholds):
         evaluate_results = self.cell_evaluator.evaluate(iou_thresholds, True)
 
-        # 初始化邻接关系信息
+        # Initialize adjacency information
         num_pred_cells = len(self.pred_cells)
         num_gt_cells = len(self.gt_cells)
 
@@ -514,7 +514,7 @@ class PhyAdjRelationEvaluator(BaseEvaluator):
         gt_ar_pair = [[self.NONE] * num_gt_cells for _ in range(num_gt_cells)]
         pred_adj_relations, gt_adj_relations = 0, 0
 
-        # 计算 pred_cells 的邻接关系
+        # Calculate the adjacency of pred_cells
         for i in range(num_pred_cells):
             for j in range(i + 1, num_pred_cells):
                 pred_ar_pair[i][j] = self.get_adj_relation(self.pred_quads[i], self.pred_quads[j])
@@ -522,18 +522,18 @@ class PhyAdjRelationEvaluator(BaseEvaluator):
                     pred_ar_pair[j][i] = -pred_ar_pair[i][j]
                     pred_adj_relations += 1
 
-        # 计算 gt_cells 的邻接关系
+        # Calculate adjacencies for gt_cells
         for i in range(num_gt_cells):
             for j in range(i + 1, num_gt_cells):
                 gt_ar_pair[i][j] = self.get_adj_relation(self.gt_quads[i], self.gt_quads[j])
                 if gt_ar_pair[i][j] != self.NONE:
                     gt_adj_relations += 1
 
-        # 开始计算
+        # Start the calculation
         for threshold in iou_thresholds:
             match_indices = evaluate_results[threshold]["match_indices"]
 
-            # 统计正确邻接关系对数
+            # Count the correct logarithm of adjacencies
             true_adj_relations = 0
             for gt_i, pred_i in enumerate(match_indices):
                 if pred_i is None:
@@ -591,19 +591,19 @@ class ScitsrRelationEvaluator(BaseEvaluator):
 
     """multiable
     def __init__(self, pred_tables, gt_tables):
-        # 获取排序后的 tables
+        # Get the sorted tables
         self.pred_tables, self.gt_tables, self.pred_table_bboxes, self.gt_table_bboxes = TableStructEvaluator._get_sorted_tables(pred_tables, gt_tables)
 
     def evaluate(self, cmp_blank=True, table_iou_threshold=0.7):
-        # 匹配表格列表
+        # List of matching tables
         table_pairs = TableStructEvaluator._match_tables(self.gt_table_bboxes, self.pred_table_bboxes, table_iou_threshold)
         not_match_gts = set(range(len(self.gt_table_bboxes))) - set([pair[0] for pair in table_pairs])
         not_match_preds = set(range(len(self.pred_table_bboxes))) - set([pair[1] for pair in table_pairs])
 
-        # 总计数
+        # Total count
         correct_count, num_pred_relations, num_gt_relations = 0, 0, 0
 
-        # 评估所有匹配表格
+        # Evaluate all matching forms
         for gt_i, pred_i in table_pairs:
             gt_cells = self.gt_tables[gt_i]
             pred_cells = self.pred_tables[pred_i]
@@ -615,7 +615,7 @@ class ScitsrRelationEvaluator(BaseEvaluator):
             num_pred_relations += len(pred_relations)
             num_gt_relations += len(gt_relations)
 
-        # 评估未匹配表格
+        # Evaluation of unmatched forms
         for gt_i in not_match_gts:
             gt_cells = self.gt_tables[gt_i]
             num_gt_relations += len(self.get_scitsr_relations([cell[1] for cell in gt_cells]))
@@ -641,16 +641,16 @@ class ScitsrRelationEvaluator(BaseEvaluator):
         return json2Relations(result, False)
 
 
-# 逻辑坐标邻接关系
+# Logical coordinate adjacencies
 # source: ICDAR2019 evaluate
 class LogAdjRelationEvaluator(BaseEvaluator):
     def __init__(self, pred_tables, gt_tables):
-        # 计算预测表格结构
+        # Calculate the forecast table structure
         self.pred_structure = [{"cells": [{"coords": cell[0], "structure": cell[1]} for cell in cells]} for cells in pred_tables]
-        # 计算标准表格结构
+        # Calculate the standard table structure
         self.gt_structure = [{"cells": [{"coords": cell[0], "structure": cell[1]} for cell in cells]} for cells in gt_tables]
 
-        # 构建单元格邻接关系评估器
+        # Build a cell adjacency evaluator
         self.carte_cell_adj_relation_evaluator = cell_adj_relation.Carte(self.pred_structure, self.gt_structure)
         self.cell_adj_relation_evaluator = cell_adj_relation.Evaluate(self.pred_structure, self.gt_structure)
 
@@ -684,18 +684,18 @@ class LogAdjRelationEvaluator(BaseEvaluator):
     @staticmethod
     def split_tables_by_id(cells):
         """
-        根据和标准表格的匹配度分割表格区域
+        Divide the table area according to how well it matches the standard table
 
         Args:
-            - cells: 标准单元格列表，结构：[[cell..., table_id], ...]
+            - cells: standard cell list, structure: [[cell..., table_id], ...]
 
         Returns:
-            - tables: 预测表格列表
+            - tables: a list of prediction tables
         """
         if len(cells) == 0:
             return [], False
 
-        # 分离标准表格
+        # Separate standard tables
         tables = {}
         for cell in cells:
             table_id = cell[-1]
@@ -709,18 +709,18 @@ class LogAdjRelationEvaluator(BaseEvaluator):
     @staticmethod
     def split_tables_by_iou(pred_cells, gt_cells, iou_threshold):
         """
-        根据和标准表格的匹配度分割表格区域
+        Divide the table area according to how well it matches the standard table
 
         Args:
-            - pred_cells: 预测单元格列表，结构：[pred_cell, ...]， pred_cell=>[Physical coordinates, ...]
-            - gt_cells: 标准单元格列表，结构：[[gt_cell..., table_id], ...]， gt_cell=>[Physical coordinates, ...]
-            - iou_threshold: 匹配度阈值
+            - pred_cells: Predict a list of cells, structure: [pred_cell, ...], pred_cell=>[Physical coordinates, ...]
+            - gt_cells: Standard cell list, structure: [[gt_cell..., table_id], ...], gt_cell=>[Physical coordinates, ...]
+            - iou_threshold: the match threshold
 
         Returns:
-            - pred_tables: 预测表格列表
-            - gt_tables: 标准表格列表
+            - pred_tables: A list of forecast tables
+            - gt_tables: A list of standard forms
         """
-        # 分离标准表格
+        # Separate standard tables
         gt_tables = {}
         for gt_cell in gt_cells:
             table_id = gt_cell[-1]
@@ -729,10 +729,10 @@ class LogAdjRelationEvaluator(BaseEvaluator):
 
             gt_tables[table_id].append(gt_cell[:-1])
 
-        # 计算iou
+        # Calculate IOUs
         ious = BoxEvaluator([cell[0] for cell in pred_cells], [cell[0] for cell in gt_cells]).ious
 
-        # 分离预测表格
+        # Detach the forecast table
         pred_tables = {}
         unmatched_cells = []
         for i, pred_cell in enumerate(pred_cells):

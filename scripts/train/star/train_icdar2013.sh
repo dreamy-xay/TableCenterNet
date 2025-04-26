@@ -1,0 +1,12 @@
+python main.py mtable train \
+    --model cfg/models/startsr-mtable.yaml \
+    --data cfg/datasets/ICDAR2013.yaml \
+    --epochs 200 \
+    --device 0,1 \
+    --master_batch -1 \
+    --batch 22 \
+    --workers 32 \
+    --lr_step 140,180 \
+    --val_epochs 10 \
+    --project Train/ICDAR2013 \
+    --name star

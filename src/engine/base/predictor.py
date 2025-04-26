@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-Description: 
-Version: 
+Description:
+Version:
 Autor: dreamy-xay
 Date: 2024-10-22 10:34:01
 LastEditors: dreamy-xay
@@ -17,11 +17,11 @@ from utils.parallel import WorkerParallel
 
 class BasePredictor(object):
     def __init__(self, model):
-        # 模型
+        # Models
         self.model = model
         self.model.eval()
 
-        # 其他参数
+        # Other parameters
         self.is_debug = not getattr(self, "debug").__qualname__.startswith("BasePredictor.")
 
     def set_device(self, device):
@@ -43,15 +43,15 @@ class BasePredictor(object):
     def run_image(self, image, *args, **kwargs):
         """
         Args:
-            - image (np.ndarray): 输入图像
-            - args (tuple): 其他参数，将作为参数传递给 self.pre_process, self.process, self.post_process 函数
-            - kwargs (dict): 其他参数，将作为参数传递给 self.pre_process, self.process, self.post_process 函数
+            - image (np.ndarray): Enter an image
+            - args (tuple): Other arguments, which will be passed as arguments to the self.pre_process, self.process, self.post_process functions
+            - kwargs (dict): Other arguments, which will be passed as arguments to the self.pre_process, self.process, self.post_process functions
         """
 
-        # 图像预处理，的得到模型输入
+        # Image pre-processing to get model input
         input = self.pre_process(image, *args, **kwargs)
 
-        # 将输入数据转移到指定设备上
+        # Transfer the input data to the specified device
         other_args = ()
         if isinstance(input, tuple):
             other_args = input[1:]
@@ -59,83 +59,83 @@ class BasePredictor(object):
         else:
             input = input.to(self.device)
 
-        # 确保所有 GPU 操作完成
+        # Make sure all GPU operations are complete
         if self.use_gpu:
             torch.cuda.synchronize()
 
-        # 模型推理并解码得到结果
+        # The model infers and decodes to get the result
         output = self.process(input, *other_args, *args, **kwargs)
 
-        # 确保所有 GPU 操作完成
+        # Make sure all GPU operations are complete
         if self.use_gpu:
             torch.cuda.synchronize()
 
-        # 如果子类覆写了 debug 函数，则调用 debug 函数进行调试
+        # If the subclass overrides the debug function, call the debug function for debugging
         if self.is_debug:
             self.debug(image, input, output)
 
-        # 模型推理（含解码等操作）结果后处理
+        # Post-processing of model inference results (including operations such as decoding).
         result = self.post_process(*output if isinstance(output, tuple) else output, *args, **kwargs)
 
-        # 确保所有 GPU 操作完成
+        # Make sure all GPU operations are complete
         if self.use_gpu:
             torch.cuda.synchronize()
 
-        # 根据原图像和推理结果生成结果图像
+        # Generate a result image based on the original image and the inference result
         result_image = self.generate(image, result)
 
         return result, result_image
 
     def pre_process(self, image, *args, **kwargs):
         """
-        模型输入预处理，必须实现
+        Model input preprocessing, which must be implemented
 
         Args:
-            - image (np.ndarray): 输入图像
-            - args (tuple): 其他参数，来自函数 self.run_image 的 args 参数
-            - kwargs (dict): 其他参数，来自函数 self.run_image 的 kwargs 参数
+            - image (np.ndarray): Enter an image
+            - args (tuple): Other arguments, args arguments from function self.run_image
+            - kwargs (dict): Other arguments, kwargs arguments from function self.run_image
 
         Returns:
-            - input (torch.Tensor | Tuple[torch.Tensor, ...]): 模型输入或者以模型输入为首元素的元组
+            - input (torch. Tensor | Tuple[torch. Tensor, ...]): Model input or tuple of elements starting with model input
         """
         raise NotImplementedError("Subclasses must implement the 'pre_process' method.")
 
     def process(self, input, *args, **kwargs):
         """
-        模型推理（可以含解码过程），必须实现
+        Model inference, which can include a decoding process, must be implemented
 
         Args:
-            - input (torch.Tensor): 模型输入
-            - args (tuple): 其他参数，来自函数 self.pre_process 的 returns[1:] 参数和函数 self.run_image 的 args 参数
-            - kwargs (dict): 其他参数，来自函数 self.run_image 的 kwargs 参数
+            - input (torch. Tensor): Model input
+            - args (tuple): Other arguments, from the returns[1:] parameter of function self.pre_process and the args argument of function self.run_image
+            - kwargs (dict): Other arguments, kwargs arguments from function self.run_image
 
         Returns:
-            - output (Any): 模型推理（可以含解码过程）输出
+            - output (any): The output of model inference (which can include a decoding process).
         """
         raise NotImplementedError("Subclasses must implement the 'process' method.")
 
     def post_process(self, output, *args, **kwargs):
         """
-        模型推理（含解码等操作）结果后处理，必须实现
+        Post-processing of model inference results (including operations such as decoding) must be implemented
 
         Args:
-            - output (torch.Tensor): 模型推理结果
-            - args (tuple): 其他参数，来自函数 self.process 的 returns[1:] 参数和函数 self.run_image 的 args 参数
-            - kwargs (dict): 其他参数，来自函数 self.run_image 的 kwargs 参数
+            - output (torch. Tensor): Model inference results
+            - args (tuple): Other arguments, from the returns[1:] parameter of the function self.process and the args argument of the function self.run_image
+            - kwargs (dict): Other arguments, kwargs arguments from function self.run_image
 
         Returns:
-            - result (Any): 模型推理（可以含解码过程）输出
+            - result (any): The output of model inference (which can include a decoding process).
         """
         raise NotImplementedError("Subclasses must implement the 'post_process' method.")
 
     def debug(self, image, input, output):
         """
-        模型推理（含解码等操作）结果调试
+        Debugging of model inference results (including operations such as decoding).
 
         Args:
-            - image (np.ndarray): 输入图像
-            - input (torch.Tensor | Tuple[torch.Tensor, ...]): 模型输入或者以模型输入为首元素的元组
-            - output (Any): 模型推理（可以含解码过程）输出
+            - image (np.ndarray): Enter an image
+            - input (torch. Tensor | Tuple[torch. Tensor, ...]): Model input or tuple of elements starting with model input
+            - output (any): The output of model inference (which can include a decoding process).
 
         Returns: None
         """
@@ -143,20 +143,20 @@ class BasePredictor(object):
 
     def generate(self, image, result):
         """
-        根据原图像和推理结果生成结果图像，必须实现
+        Generating a result image based on the original image and the inference result must be implemented
 
         Args:
-            - image (np.ndarray): 输入图像
-            - result (Any): 模型推理并后处理的结果
+            - image (np.ndarray): Enter an image
+            - result (any): the result of model inference and post-processing
 
         Returns:
-            - result_image (np.ndarray): 结果图像
+            - result_image (np.ndarray): Result image
         """
         raise NotImplementedError("Subclasses must implement the 'generate' method.")
 
     def run(self):
         """
-        预测器执行流程的主函数，必须实现
+        The predictor executes the main function of the process, which must be implemented
 
         Returns: None
         """
@@ -164,61 +164,61 @@ class BasePredictor(object):
 
     def predict(self, options):
         """
-        单进程单设备预测
+        Single-process, single-device prediction
 
         Args:
-            - options: 必须含有以下属性
-                - source: 图片或视频文件夹路径
-                - device: 设备名称，如 "cuda:0" 或者 "cpu"
-                - save: 是否保存图片推理的结果图像，由 BasePredictor.generate 生成
-                - show: 是否展示图片推理的结果图像，由 BasePredictor.generate 生成
-                - save_shows_dir: 推理的结果图像保存路径
+            - options: must contain the following attributes:
+                - source: The path of the image or video folder
+                - device: The name of the device, e.g. "cuda:0" or "cpu"
+                - save: Whether to save the result image of image inference, which is generated by BasePredictor.generate
+                - show: Whether to display the result image of image inference, which is generated by BasePredictor.generate
+                - save_shows_dir: The path where the result image of the inference is saved
 
         Returns:
-            - results: 返回推理的结果列表，列表的每一项具体如下
-                - type: 结果类型，"image" 或者 "video"
-                - name: 推理的文件名
-                - result: 推理的结果，为 BasePredictor.post_process 的返回值
+            - results: Returns a list of inference results, each of which is as follows
+                - type: Result type, "image" or "video"
+                - name: The name of the file for inference
+                - result: The result of the inference, which is the return value of BasePredictor.post_process
         """
-        # 设置设备
+        # Set up the device
         self.set_device(options.device)
 
-        # 开始预测
-        media_processor = MediaProcessor(options.source, options.save_shows_dir, self.run_image)  # 图片视频加载运行器
+        # Start Forecasting
+        media_processor = MediaProcessor(options.source, options.save_shows_dir, self.run_image)  # Picture and video loading runner
         results = media_processor.process(options.show, options.save)
 
         return results
 
     def parallel_predict(self, options):
         """
-        多进程（任意设备数）并行预测
+        Multi-process (any number of devices) parallel prediction
 
         Args:
-            - options: 必须含有以下属性
-                - source: 图片或视频文件夹路径
-                - workers: 单设备进程数
-                - devices: 设备列表，如 ['cuda:0', 'cuda:1', 'cpu', ...]，可以通过 BasePredictor._get_devices 获取
-                - save: 是否保存图片推理的结果图像，由 BasePredictor.generate 生成
-                - show: 是否展示图片推理的结果图像，由 BasePredictor.generate 生成
-                - save_shows_dir: 推理的结果图像保存路径
+            - options: must contain the following attributes:
+                - source: The path of the image or video folder
+                - workers: the number of processes per device
+                - devices: A list of devices, such as ['cuda:0', 'cuda:1', 'cpu', ...], which can be obtained from BasePredictor._get_devices
+                - save: Whether to save the result image of image inference, which is generated by BasePredictor.generate
+                - show: Whether to display the result image of image inference, which is generated by BasePredictor.generate
+                - save_shows_dir: The path where the result image of the inference is saved
 
         Returns:
-            - results: 返回推理的结果列表，列表的每一项具体如下
-                - type: 结果类型，"image" 或者 "video"
-                - name: 推理的文件名
-                - result: 推理的结果，为 BasePredictor.post_process 的返回值
+            - results: Returns a list of inference results, each of which is as follows
+                - type: Result type, "image" or "video"
+                - name: The name of the file for inference
+                - result: The result of the inference, which is the return value of BasePredictor.post_process
         """
-        # 加载所有图例图片
+        # Load all legend images
         file_path_list = MediaProcessor.get_file_paths(options.source)
-        # 初始化多进程推理进度条
+        # Initialize the multi-process inference progress bar
         progress_bar = WorkerParallel.SharedProgressBar(total=len(file_path_list), desc="Parallel Processing Media", unit="file")
 
-        # 设置每个进程单次推理的函数参数
+        # Set the function parameters for each process for a single inference
         predict_args_list = []
         for filename, file_path in file_path_list:
             predict_args_list.append((filename, file_path))
 
-        # 设置每个进程的共享参数
+        # Set the sharing parameters for each process
         worker_args_list = []
         for _ in range(options.workers):
             for device in options.devices:
@@ -226,7 +226,7 @@ class BasePredictor(object):
                 setattr(cur_predictor, "initialize_cuda_device", device)
                 worker_args_list.append((progress_bar, options, cur_predictor))
 
-        # 定义一个单文件预测的函数
+        # Define a single-file prediction function
         def parallel_predict(bar, options, predictor, filename, file_path):
             initialize_cuda_device = getattr(predictor, "initialize_cuda_device", None)
             if initialize_cuda_device is not None:
@@ -236,7 +236,7 @@ class BasePredictor(object):
             result = media_processor.process_file(bar, filename, file_path, options.show, options.save)
             return result
 
-        # 开始多进程推理
+        # Start multi-process inference
         worker_parallel = WorkerParallel(parallel_predict, predict_args_list, worker_args_list)
         results = worker_parallel.run()
         progress_bar.close()

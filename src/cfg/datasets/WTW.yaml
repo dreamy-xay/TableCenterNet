@@ -1,39 +1,39 @@
-path: # 路径配置
-  dataset_name: "WTW" # 数据集所在文件夹（也叫数据集名称），该路径参考至 cfg/default.yaml 中的 dirs.data_dir，即数据集所在路径为 dirs.data_dir/WTW
+path: # Path configuration
+  dataset_name: "WTW" # The folder where the dataset is located (also known as the dataset name), which refers to the dirs.data_dir in cfg/default.yaml, that is, the path where the dataset is located is dirs.data_dir/WTW
 
-  reset_data_dir: null # 设置了该文件目录，将会覆盖 dirs.dataset_name，即数据集所在路径为 dirs.reset_data_dir/WTW，覆盖注意必须是绝对路径
+  reset_data_dir: null # If the file directory is set, the dirs.dataset_name will be overwritten, that is, the path where the dataset is located is dirs.reset_data_dir/WTW, and the override note must be an absolute path
 
-  train: "train.json" # 训练标签文件
-  val: "test.json" # 验证标签文件
-  test: "test.json" # 测试标签文件
+  train: "train.json" # Training tag file
+  val: "test.json" # Verify the label file
+  test: "test.json" # Test the tag file
 
-model: # 模型相关配置
-  down_ratio: 4 # 图片下采样倍数，用于减少计算量
+model: # Model-related configurations
+  down_ratio: 4 # The image is downsampled to reduce the amount of computation
 
-dataset: # 数据集相关配置
-  resolution: [1024, 1024] # 数据集最终输入图片分辨率
+dataset: # Dataset related configurations
+  resolution: [1024, 1024] # The final input image resolution of the dataset
 
-limit: # 目标限制配置
-  max_objects: 300 # 每张图片最多包含的对象（单元格）数量
-  max_corners: 1200 # 构成所有单元格的最多存在的角点数量
+limit: # Target Restriction Configuration
+  max_objects: 300 # The maximum number of objects (cells) that each image can contain
+  max_corners: 1200 # The maximum number of corners that make up all the cells that exist
 
-stand: # 标准化配置
-  mean: [0.40789654, 0.44719302, 0.47026115] # 标准化均值
-  std: [0.28863828, 0.27408164, 0.27809835] # 标准化标准差
+stand: # Standardized configuration
+  mean: [0.40789654, 0.44719302, 0.47026115] # Normalized mean
+  std: [0.28863828, 0.27408164, 0.27809835] # Standardized standard deviation
 
-augmentation: # 数据增强配置
-  color: # 颜色增强
-    enable: true # 是否启用颜色增强
+augmentation: # Data augmentation configuration
+  color: # Color Enhancement
+    enable: true # Whether to enable color enhancement
 
-    # 以下三个参数重要用于通过主成分分析（PCA）参数来修改图像，增加光照效果，详情见 utils/image.py->lighting_
-    random_state_seed: 123 # 随机数生成器类的种子
-    eigval: [0.2141788, 0.01817699, 0.00341571] # PCA 的特征值，决定每个主成分的影响
-    eigvec: # 对应特征值的特征向量，表示 PCA 空间中的方向
+    # The following three parameters are important for modifying the image and increasing the lighting effect through the Principal Component Analysis (PCA) parameters, see utils/image.py->lighting_ for details.
+    random_state_seed: 123 # Seed of the random number generator class
+    eigval: [0.2141788, 0.01817699, 0.00341571] # The eigenvalues of the PCA, which determine the influence of each principal component
+    eigvec: # The eigenvector corresponding to the eigenvalue, representing the direction in PCA space
       - [-0.58752847, -0.69563484, 0.41340352]
       - [-0.5832747, 0.00994535, -0.81221408]
       - [-0.56089297, 0.71832671, 0.41158938]
 
-  random_crop: true # 随机裁剪数据增强，启用时 shift 平移参数不生效
-  scale: 0.4 # 随机缩放阈值，[1 - scale, 1 + scale] 范围内缩放，取值仅为 0.1 的倍数
-  rotate: 0 # 随机旋转阈值，当大于0时，在 [-rotate, rotate]  角度范围内旋转
-  shift: 0.1 # 随机平移阈值，当大于0时，在 [-shift, shift] * (width or height) 范围内平移，仅当 random_crop 为 false 时生效
+  random_crop: true # Random cropping data enhancement, the shift panning parameter does not take effect when enabled
+  scale: 0.4 # Random scaling threshold, [1 - scale, 1 scale] range, the value is only a multiple of 0.1
+  rotate: 0 # Random rotation threshold, when greater than 0, rotate within the [-rotate, rotate] angle range
+  shift: 0.1 # Random pan threshold, when greater than 0, pan in the range of [-shift, shift] * (width or height), only if random_crop is false

@@ -1,0 +1,11 @@
+python src/main.py mtable val \
+    --model src/cfg/models/dlatsr-mtable.yaml \
+    --source datasets/TG24K/test_images \
+    --model_path checkpoints/TG24K/dla/model_best.pth \
+    --label datasets/TG24K/labels/test.json \
+    --resolution 768 \
+    --device 0,1 \
+    --save_result \
+    --infer_workers 12 \
+    --project Val/TG24K \
+    --name dla

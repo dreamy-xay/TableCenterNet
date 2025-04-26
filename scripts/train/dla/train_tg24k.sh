@@ -1,0 +1,12 @@
+python main.py mtable train \
+    --model cfg/models/dlatsr-mtable.yaml \
+    --data cfg/datasets/TG24K.yaml \
+    --epochs 200 \
+    --device 0,1 \
+    --master_batch -1 \
+    --batch 38 \
+    --workers 32 \
+    --lr_step 140,180 \
+    --val_epochs 10 \
+    --project Train/TG24K \
+    --name dla

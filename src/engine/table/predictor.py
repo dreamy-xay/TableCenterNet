@@ -30,44 +30,44 @@ except:
 
 
 class TablePredictor(BasePredictor):
-    resolution = [1024, 1024]  # 数据集最终输入图片分辨率
-    mean = [0.40789654, 0.44719302, 0.47026115]  # 标准化均值
-    std = [0.28863828, 0.27408164, 0.27809835]  # 标准化标准差
+    resolution = [1024, 1024]  # The final input image resolution of the dataset
+    mean = [0.40789654, 0.44719302, 0.47026115]  # Normalized mean
+    std = [0.28863828, 0.27408164, 0.27809835]  # Standardized standard deviation
 
-    down_ratio = 4  # 下采样倍数
+    down_ratio = 4  # Downsampling multiplier
 
     def __init__(self, args):
         self.args = args
 
-        # 更新推理图像分辨率
+        # Update the inference image resolution
         resolution = getattr(args, "resolution", 0)
         if resolution != 0:
             self.resolution = [resolution, resolution]
 
-        # 加载训练好的模型
+        # Load the trained model
         model = create_model(args.model)
-        model = load_model(model, args.model_path)  # 加载 model_best
-        if isinstance(model, tuple):  # 如果是加载的 model_last 等，则只加载 model
+        model = load_model(model, args.model_path)  # Load model_best
+        if isinstance(model, tuple):  # If it is a loaded model_last, etc., only the model is loaded
             model = model[0]
 
-        # 初始化构造函数
+        # Initialize the constructor
         super().__init__(model)
 
-        # 标准化数据预处理
+        # Standardized data preprocessing
         self.mean = np.array(self.mean, dtype=np.float32).reshape(1, 1, 3)
         self.std = np.array(self.std, dtype=np.float32).reshape(1, 1, 3)
 
-        # 单元格分数衰减阈值
+        # Cell score decay threshold
         self.cell_min_optimize_count = 2
         self.cell_decay_thresh = 0.4
 
-        # 调试器
+        # Debugger
         self.debugger = Debugger()
 
-        # 保存参数
+        # Save parameters
         Logger.save_options(args)
 
-        # 打印 GFLOPs和参数量
+        # Print GFLOPs and parameter quantities
         if HAS_THOP:
             with torch.no_grad():
                 flops, params = profile(self.model, inputs=(torch.randn(1, 3, *self.resolution),))
@@ -85,20 +85,20 @@ class TablePredictor(BasePredictor):
         center = np.array([width / 2.0, height / 2.0], dtype=np.float32)
         scale = max(height, width) * 1.0
 
-        # 获取仿射变换矩阵
+        # Get the affine transformation matrix
         trans_input = get_affine_transform(center, scale, 0, [input_width, input_height])
-        # 获取输入图像
+        # Get the input image
         input_image = cv2.warpAffine(image, trans_input, (input_width, input_height), flags=cv2.INTER_LINEAR)
 
-        # 标准化数据
+        # Normalized data
         input_image = ((input_image.astype(np.float32) / 255.0 - self.mean) / self.std).astype(np.float32)
 
-        # 一张图片做成一个 batch
+        # Make a batch of images
         batch_input = input_image.transpose(2, 0, 1).reshape(1, 3, input_height, input_width)
 
         batch_input = torch.from_numpy(batch_input)
 
-        # 预测结果还原信息
+        # Restore the prediction result
         meta = {
             "center": center,
             "scale": scale,
@@ -115,29 +115,29 @@ class TablePredictor(BasePredictor):
 
     def process(self, input, meta, *args, **kwargs):
         with torch.no_grad():
-            # 模型推理
+            # Model inference
             outputs = self.model(input)
             output = outputs[-1]
 
-            # 获取模型推理输出层
+            # Obtain the model inference output layer
             hm = output["hm"].sigmoid_()
             reg = output["reg"]
             ct2cn = output["ct2cn"]
             cn2ct = output["cn2ct"]
             lc = output["lc"]
 
-            # 输出推理结果图
+            # Output the inference result graph
             np.save(os.path.join(self.args.save_dir, meta["image_name"]), lc.detach().cpu()[0].numpy())
 
-            # 单元格物理坐标解码
+            # Decoding of cell physical coordinates
             cells, cells_scores, cells_corner_count, *rets = cells_decode(
                 hm, reg, ct2cn, cn2ct, self.args.center_k, self.args.corner_k, self.args.center_thresh, self.args.corner_thresh, self.args.save_corners
             )
 
-            # 单元格逻辑坐标解码
+            # Decoding of cell logical coordinates
             logic_coords = logic_coords_decode(lc, cells)
 
-            # 根据单元格的角点优化次数降低其评分
+            # Reduce the score of a cell based on the number of times it is optimized for corners
             is_modify = False
             for i in range(cells.size(1)):
                 if cells_scores[0, i, 0] < self.args.center_thresh:
@@ -147,38 +147,38 @@ class TablePredictor(BasePredictor):
                     cells_scores[0, i, 0] *= self.cell_decay_thresh
                     is_modify = True
 
-            # 合并输出
+            # Merge outputs
             detections = torch.cat([cells, cells_scores, logic_coords], dim=2)
 
-            # 如果修改了score则重新排序
+            # If the score is modified, the order will be reordered
             if is_modify:
                 _, sorted_inds = torch.sort(cells_scores, descending=True, dim=1)
                 detections = detections.gather(1, sorted_inds.expand_as(detections))
 
-            # 返回检测结果
+            # Returns the test result
             return detections, rets[0] if self.args.save_corners else None, meta
 
     def post_process(self, detections, corners, meta, *args, **kwargs):
-        # 获取模型预测结果
+        # Get the prediction results of the model
         detections = detections.detach().cpu().numpy()[0]
 
-        # 删除置信度低于阈值的单元格
+        # Delete cells whose confidence level is lower than the threshold
         detections = detections[detections[:, 8] >= self.args.center_thresh]
 
-        # 获取还原预测结果的元数据
+        # Get the metadata of the restored prediction results
         center, scale, rotate, shift, output_width, output_height = meta["center"], meta["scale"], meta["rotate"], meta["shift"], meta["output_width"], meta["output_height"]
 
-        # 还原预测结果
+        # Restore the prediction result
         detections[:, 0:2] = transform_preds(detections[:, 0:2], center, scale, (output_width, output_height), rotate, shift)
         detections[:, 2:4] = transform_preds(detections[:, 2:4], center, scale, (output_width, output_height), rotate, shift)
         detections[:, 4:6] = transform_preds(detections[:, 4:6], center, scale, (output_width, output_height), rotate, shift)
         detections[:, 6:8] = transform_preds(detections[:, 6:8], center, scale, (output_width, output_height), rotate, shift)
 
-        # 非极大抑制
+        # Non-maximal inhibition
         if self.args.nms:
             detections = _pnms(detections, self.args.iou_thresh, True)
 
-        # 还原角点
+        # Restore corners
         if self.args.save_corners:
             corners = corners.detach().cpu().numpy()[0]
             corners = corners[corners[:, 2] >= self.args.corner_thresh]
@@ -189,7 +189,7 @@ class TablePredictor(BasePredictor):
         return detections, None
 
     def generate(self, image, result):
-        # 如果需要保存或者显示，则生成可视化结果
+        # If you need to save or display, a visualization will be generated
         if self.args.save or self.args.show:
             detections = result[0]
 
@@ -204,12 +204,12 @@ class TablePredictor(BasePredictor):
         return None
 
     def run(self):
-        devices = self._get_devices(self.args.device)  # 获取推理所需GPU
-        is_parallel_infer = self.args.workers * len(devices) > 1  # 是否并行推理
+        devices = self._get_devices(self.args.device)  # Obtain the GPU required for inference
+        is_parallel_infer = self.args.workers * len(devices) > 1  # Whether parallel reasoning is used
 
         if is_parallel_infer and os.path.isdir(self.args.source):
             print(f"Start multi-process prediction. Using GPUs {devices}, and each GPU runs {self.args.workers} processes in parallel.")
-            setattr(self.args, "devices", devices)  # 设置多进程设备列表
+            setattr(self.args, "devices", devices)  # Set the multi-process device list
             results = self.parallel_predict(self.args)
         else:
             if is_parallel_infer:
@@ -219,11 +219,11 @@ class TablePredictor(BasePredictor):
 
             results = self.predict(self.args)
 
-        # 保存预测结果
+        # Save the prediction results
         if self.args.save_result:
             self.save_results(results, self.args.save_results_dir)
 
-        # 保存角点图片
+        # Save the corner picture
         if self.args.save_corners:
             self.save_corners(results, self.args.save_corners_dir)
 
@@ -237,7 +237,7 @@ class TablePredictor(BasePredictor):
             return cells
 
         for result in results:
-            # 保存json文件
+            # Save the json file
             type = result["type"]
             name = result["name"]
             detections = result["result"]

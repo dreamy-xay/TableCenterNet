@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-Description: 
-Version: 
+Description:
+Version:
 Autor: dreamy-xay
 Date: 2024-10-22 14:49:10
 LastEditors: dreamy-xay
@@ -15,65 +15,65 @@ from bisect import bisect_left, bisect_right
 class IntervalFinder:
     def __init__(self, intervals):
         """
-        初始化 IntervalFinder 类，接受一个由 (start, end) 区间组成的列表作为输入。
+        Initialize the IntervalFinder class to accept a list of (start, end) intervals as input.
 
-        :param intervals: 一个包含多个 (start, end) 区间元组的列表
+        :param intervals: A list of multiple (start, end) interval tuples
         """
-        # 记录区间数目
+        # Number of record intervals
         num_intervals = len(intervals)
 
-        # 对区间按照起始点进行排序，并保留原始索引
+        # Sort the intervals by starting point and keep the original index
         self.start_sorted = sorted(list(range(num_intervals)), key=lambda idx: intervals[idx][0])
-        # 对区间按照结束点进行排序，并保留原始索引
+        # Sort intervals by end point and retain the original index
         self.end_sorted = sorted(list(range(num_intervals)), key=lambda idx: intervals[idx][1])
 
-        # 提取出仅用于二分查找的起始点和结束点的列表
+        # Extract a list of start and end points that are only used for binary lookups
         self.starts = [intervals[idx][0] for idx in self.start_sorted]
         self.ends = [intervals[idx][1] for idx in self.end_sorted]
 
     def query(self, q_start, q_end, is_union=True):
         """
-        查询与给定区间相交的所有区间索引。
+        Query all compartment indexes that intersect a given compartment.
 
-        :param q_start: 查询区间的起始点
-        :param q_end: 查询区间的结束点
-        :param is_union: 是否求并集，否则求交集
-        :return: 一个包含所有相交区间原始索引的列表
+        :param q_start: The starting point of the query interval
+        :param q_end: The end point of the query compartment
+        :param is_union: Whether to find the union, otherwise to find the intersection
+        :return: A list of the original indexes of all intersecting intervals
         """
-        # 找出所有起始点在查询区间内的区间索引
+        # Find the interval index of all starting points within the query interval
         start_index = bisect_left(self.starts, q_start)
         end_index = bisect_right(self.starts, q_end)
         start_indexes = set(self.start_sorted[start_index:end_index])
 
-        # 找出所有结束点在查询区间内的区间索引
+        # Find the interval index of all end points within the query interval
         start_index = bisect_left(self.ends, q_start)
         end_index = bisect_right(self.ends, q_end)
         end_indexes = set(self.end_sorted[start_index:end_index])
 
-        # 取并集
+        # Take the union
         return start_indexes.union(end_indexes) if is_union else start_indexes.intersection(end_indexes)
 
 
 class BoxesFinder:
     def __init__(self, x_ranges, y_ranges, query_x_ranges, query_y_ranges):
         """
-        快速查询 boxes 中哪些 box 与 query_boxes 中指定的 query_box 相交的类
+        Quickly query which boxes in the boxes intersect with the query_box specified in query_boxes
 
-        :param x_ranges: boxes 中每个 box 的 x 坐标范围
-        :param y_ranges: boxes 中每个 box 的 y 坐标范围
-        :param query_x_ranges: query_boxes 中每个 query_box 的 x 坐标范围
-        :param query_y_ranges: query_boxes 中每个 query_box 的 y 坐标范围
+        :param x_ranges: The range of x-coordinates for each box in the boxes
+        :param y_ranges: The y-coordinate range of each box in the boxes
+        :param query_x_ranges: The x-coordinate range for each query_box in the query_boxes
+        :param query_y_ranges: The y-coordinate range for each query_box in the query_boxes
 
         """
-        # 初始化 query
+        # Initialize the query
         self.query_x_intervals = query_x_ranges
         self.query_y_intervals = query_y_ranges
 
-        # 构建区间查询器，查询 boxes 中哪些 box 与 query_boxes 中指定的 query_box 相交
+        # Build an interval querier to query which boxes in the boxes intersect with the query_box specified in the query_boxes
         self.x_interval_finder = IntervalFinder(x_ranges)
         self.y_interval_finder = IntervalFinder(y_ranges)
 
-        # 获取 query_interval 被 interval 包含的情况
+        # Get the case where query_interval is included in interval
         self.included_x_indexes_list = self.get_included(query_x_ranges, x_ranges)
         self.included_y_indexes_list = self.get_included(query_y_ranges, y_ranges)
 
@@ -91,21 +91,21 @@ class BoxesFinder:
 
     def query(self, index):
         """
-        快速查询 boxes 中哪些 box 与 query_boxes 中指定索引的 query_box 相交
-        query 时间复杂度 O(max(log(n), m)), n 表示 boxes 数目，m 表示与 query_box 相交的 box 的最大数目
+        Quickly query which boxes in the boxes intersect with the query_box of the specified index in query_boxes
+        The query time complexity O(max(log(n), m)), n is the number of boxes, and m is the maximum number of boxes that intersect query_box
 
-        :param index: 索引
-        :return: 与 query_boxes 中指定索引的 query_box 相交的 box 的索引集合
+        :param index: index
+        :return: The collection of indexes for boxes that intersect the query_box of the specified index in query_boxes
         """
-        # 获取查询区间
+        # Obtain the query interval
         x_interval = self.query_x_intervals[index]
         y_interval = self.query_y_intervals[index]
 
-        # 获取包含查询区间（query_intervals）的区间（intervals）索引集合
+        # Get the set of intervals indexes that contain the query_intervals of query intervals
         included_x_indexes = self.included_x_indexes_list[index]
         included_y_indexes = self.included_y_indexes_list[index]
 
-        # 获取与查询区间（query_intervals）相交的区间（intervals）索引集合
+        # Get the set of intervals indexes that intersect the query interval (query_intervals).
         x_indexes = self.x_interval_finder.query(*x_interval).union(included_x_indexes)
         y_indexes = self.y_interval_finder.query(*y_interval).union(included_y_indexes)
 
@@ -136,17 +136,17 @@ class AverageMeter(object):
 
 def numpy_to_list(obj):
     if isinstance(obj, np.ndarray):
-        # 如果是 numpy 数组，转换为 list
+        # If it's a numpy array, convert it to a list
         return obj.tolist()
     elif isinstance(obj, dict):
-        # 如果是字典，递归地将键值对中的 numpy 数组转换为 list
+        # If it's a dictionary, recursively convert the numpy array in the key-value pair to a list
         return {key: numpy_to_list(value) for key, value in obj.items()}
     elif isinstance(obj, list):
-        # 如果是列表，递归地处理每个元素
+        # In the case of a list, each element is processed recursively
         return [numpy_to_list(item) for item in obj]
     elif isinstance(obj, tuple):
-        # 如果是元组，递归地处理每个元素
+        # In the case of tuples, each element is processed recursively
         return tuple(numpy_to_list(item) for item in obj)
     else:
-        # 如果既不是 numpy 数组，也不是容器类型，直接返回原始对象
+        # If it's neither a numpy array nor a container type, just return the original object
         return obj

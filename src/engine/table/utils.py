@@ -62,20 +62,20 @@ def _topk(scores, K=40):
 
 
 def _pnms(detections, iou_thresh, overlap=False):
-    # 多边形数目
+    # Number of polygons
     num_polygons = detections.shape[0]
 
-    # 多边形数组
+    # Polygon arrays
     polygons = []
     for i in range(num_polygons):
         polygons.append(Polygon([detections[i][0:2], detections[i][2:4], detections[i][4:6], detections[i][6:8]]))
 
-    # 多边形面积数组
+    # Polygon area array
     areas = np.zeros(num_polygons)
-    # 多边形相交面积数组
+    # Array of area where polygons intersect
     intersect_areas = np.zeros((num_polygons, num_polygons))
 
-    # 计算多边形面积和相交面积
+    # Calculate the polygon area and intersection area
     for i in range(0, num_polygons):
         polygon_i = polygons[i]
         areas[i] = polygon_i.area
@@ -85,10 +85,10 @@ def _pnms(detections, iou_thresh, overlap=False):
             intersect_polygon = polygon_i.intersection(polygon_j)
             intersect_areas[i][j] = intersect_areas[j][i] = intersect_polygon.area
 
-    # 无效多边形标签数组
+    # Invalid array of polygon labels
     inviad_targets = [False] * len(polygons)
 
-    # 计算多边形之间的交并比
+    # Calculate the intersection union ratio between polygons
     for i in range(0, num_polygons):
         polygon_i_area = areas[i]
         polygon_i_score = detections[i][8]
@@ -103,7 +103,7 @@ def _pnms(detections, iou_thresh, overlap=False):
                 else:
                     inviad_targets[i] = True
 
-    # 删除无效多边形
+    # Remove invalid polygons
     results = []
     for i in range(num_polygons):
         if not inviad_targets[i]:

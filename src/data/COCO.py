@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-Description: 
-Version: 
+Description:
+Version:
 Autor: dreamy-xay
 Date: 2024-10-22 20:21:30
 LastEditors: dreamy-xay
@@ -22,13 +22,13 @@ from utils.image import get_affine_transform
 class COCO(Dataset):
     def __init__(self, data_yaml, split):
         super(COCO, self).__init__()
-        # 加载配置文件
+        # Load the configuration file
         self._load_cfg(data_yaml)
 
-        # 参数初始化
+        # Parameter initialization
         self.is_train = split == "train"
 
-        # 数据加载
+        # Data loading
         self.coco = coco.COCO(os.path.join(self.label_dir, self.label_name[split]))
         self.images = self.coco.getImgIds()
         print("Loaded {} {} samples of data set {}.".format(split, len(self.images), self.__class__.__name__))
@@ -37,7 +37,7 @@ class COCO(Dataset):
         with open(cfg_yaml, "r") as f:
             cfg = yaml.safe_load(f)
 
-            # * 数据集路径
+            # * Dataset path
             path_cfg = cfg["path"]
             if path_cfg["reset_data_dir"]:
                 self.datasets_dir = os.path.join(path_cfg["reset_data_dir"], path_cfg["dataset_name"])
@@ -48,31 +48,31 @@ class COCO(Dataset):
             print(f"Image dir: {self.image_dir}, Label dir: {self.label_dir}")
             self.label_name = {"train": path_cfg["train"], "val": path_cfg["val"], "test": path_cfg["test"]}
 
-            # * 模型参数
+            # * Model parameters
             model_cfg = cfg["model"]
-            self.down_ratio = model_cfg["down_ratio"]  # 下采样倍数
+            self.down_ratio = model_cfg["down_ratio"]  # Downsampling multiplier
 
-            # * 数据集相关参数
+            # * Dataset-related parameters
             dataset_cfg = cfg["dataset"]
-            self.resolution = dataset_cfg["resolution"]  # 输入图像分辨率
+            self.resolution = dataset_cfg["resolution"]  # Enter the image resolution
 
-            # * 目标数目限制
+            # * Limit on the number of targets
             limit_cfg = cfg["limit"]
-            self.max_objects = limit_cfg["max_objects"]  # 最大单元格数目
-            self.max_corners = limit_cfg["max_corners"]  # 最大角点数目
+            self.max_objects = limit_cfg["max_objects"]  # Maximum number of cells
+            self.max_corners = limit_cfg["max_corners"]  # Maximum number of corners
 
-            # * 标准化参数
+            # * Normalized parameters
             stand_cfg = cfg["stand"]
             self.mean = np.array(stand_cfg["mean"], dtype=np.float32).reshape(1, 1, 3)
             self.std = np.array(stand_cfg["std"], dtype=np.float32).reshape(1, 1, 3)
 
-            # * 数据增强参数
+            # * Data augmentation parameters
             aug_cfg = cfg["augmentation"]
-            # 颜色增强
+            # Color Enhancement
             color_aug_cfg = aug_cfg["color"]
             self.color_aug = color_aug_cfg["enable"]
             self.color_aug_params = np.random.RandomState(123), np.array(color_aug_cfg["eigval"], dtype=np.float32), np.array(color_aug_cfg["eigvec"], dtype=np.float32)
-            # 仿射变换
+            # Affine transformation
             self.random_crop_aug = aug_cfg["random_crop"]
             self.scale = aug_cfg["scale"]
             self.shift = aug_cfg["shift"]
@@ -97,7 +97,7 @@ class COCO(Dataset):
         height, width = image.shape[:2]
 
         center = np.array([width / 2.0, height / 2.0], dtype=np.float32)
-        scale = max(height, width) * 1.0  # 初始存储的最大宽高
+        scale = max(height, width) * 1.0  # The maximum width and height of the initial storage
         rot = np.random.randint(-self.rotate, self.rotate) if self.rotate > 0 else 0
         input_h, input_w = self.resolution
 

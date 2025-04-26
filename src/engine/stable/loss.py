@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-Description: 
-Version: 
+Description:
+Version:
 Autor: dreamy-xay
 Date: 2024-10-22 15:43:36
 LastEditors: dreamy-xay
@@ -21,13 +21,13 @@ class LogicCoordLoss(torch.nn.Module):
         super(LogicCoordLoss, self).__init__()
 
     def forward(self, lc, span, lc_gt, span_gt, ct_ind, ct_mask):
-        # 获取每个单元格的起始逻辑坐标损失
+        # Get the starting logical coordinate loss for each cell
         lc_pred = _tranpose_and_gather_feat(lc, ct_ind)  # BxNx2
         lc_mask = ct_mask.unsqueeze(2).expand_as(lc_pred).float()  # BxNx2
         num_lc_mask = lc_mask.sum() + self.EPS
         lc_loss = F.l1_loss(lc_pred * lc_mask, lc_gt * lc_mask, reduction="sum") / num_lc_mask
-        
-        # 获取每个单元格的跨度损失
+
+        # Get the span loss for each cell
         span_pred = _tranpose_and_gather_feat(span, ct_ind)  # BxNx2
         span_mask = lc_mask  # BxNx2
         num_span_mask = num_lc_mask

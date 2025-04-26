@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-Description: 
-Version: 
+Description:
+Version:
 Autor: dreamy-xay
 Date: 2024-10-22 15:35:22
 LastEditors: dreamy-xay
@@ -23,30 +23,30 @@ class TableTrainer(BaseTrainer):
     def __init__(self, args, loss=None, dataset=None):
         self.args = args
 
-        # 数据集读取类
+        # Dataset reading class
         self.Dataset = get_dataset(args) if dataset is None else dataset
 
-        # 模型
+        # Models
         model = create_model(args.model)
 
-        # 优化器
+        # Optimizer
         optimizer = torch.optim.Adam(model.parameters(), lr=args.lr, betas=(0.9, 0.98), eps=1e-9)
 
-        # 损失函数
+        # Loss function
         loss = TableLoss((1, 1, 1, 1, 1)) if loss is None else loss
         loss_stats = loss.loss_stats
 
-        # 不启用详细日志输出
+        # Verbose log output is not enabled
         if not self.args.verbose:
             self.__setattr__("log", super().log)
 
-        # 父类构造函数
+        # Parent class constructor
         super().__init__(model, optimizer, (loss_stats, loss))
 
-        # 日志
+        # Logs
         self.logger = Logger(args)
 
-        # 最优模型的初始指标
+        # The initial metrics of the optimal model
         self.best = float("inf")
 
     def _run_and_log(self, mode, epoch, epochs, data_loader):
@@ -70,15 +70,15 @@ class TableTrainer(BaseTrainer):
 
     def run(self):
         args = self.args
-        # 训练初始化参数设置
+        # Set the training initialization parameters
         # torch.autograd.set_detect_anomaly(True)
         torch.manual_seed(args.seed)
-        torch.backends.cudnn.benchmark = True  # 启用 CuDNN 的基准模式
+        torch.backends.cudnn.benchmark = True  # Enable the baseline mode of CuDNN
 
-        # 设置设备和训练总轮数
+        # Set the device and the total number of rounds of training
         self.set_device(args.device, args.master_batch, args.batch).set_total_epoch(args.epochs)
 
-        # 加载数据集
+        # Load the dataset
         train_loader = DataLoader(self.Dataset(args.data, "train"), batch_size=args.batch, shuffle=True, num_workers=args.workers, pin_memory=True, drop_last=True)
         val_loader = DataLoader(self.Dataset(args.data, "val"), batch_size=1, shuffle=False, num_workers=1, pin_memory=True)
 
@@ -91,23 +91,23 @@ class TableTrainer(BaseTrainer):
             else:
                 self.model = train_info
 
-        # 模型存储路径
+        # Model storage path
         last_model_path = os.path.join(args.save_weights_dir, "model_last.pth")
         best_model_path = os.path.join(args.save_weights_dir, "model_best.pth")
 
         for epoch in range(start_epoch + 1, args.epochs + 1):
-            # 训练并保存训练日志
+            # Train and save training logs
             self._run_and_log("train", epoch, args.epochs, train_loader)
 
-            # 是否保存了迭代模型
+            # Whether the iterative model is saved
             is_save_period = False
 
-            # 保存迭代模型
+            # Save the iterative model
             if args.save_period > 0 and epoch % args.save_period == 0:
                 save_model(os.path.join(args.save_weights_dir, "model_{}.pth".format(epoch)), epoch, self.model, self.optimizer)
                 is_save_period = True
 
-            # 进行验证，验证效果好将保存最优模型
+            # Validation, if the verification effect is good, the optimal model will be saved
             if args.val_epochs > 0 and epoch % args.val_epochs == 0:
                 with torch.no_grad():
                     val_loss_dict = self._run_and_log("val", epoch // args.val_epochs, args.epochs // args.val_epochs, val_loader)

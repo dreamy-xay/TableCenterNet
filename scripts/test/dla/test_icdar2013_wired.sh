@@ -1,0 +1,12 @@
+python src/main.py mtable predict \
+    --model src/cfg/models/dlatsr-mtable.yaml \
+    --source datasets/ICDAR2013/wired_test_images \
+    --model_path checkpoints/WTW/dla/model_best.pth \
+    --device 0,1 \
+    --save \
+    --save_result \
+    --save_corners \
+    --workers 12 \
+    --padding 100 \
+    --project Test/ICDAR2013 \
+    --name dla_wired

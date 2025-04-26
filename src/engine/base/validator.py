@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-Description: 
-Version: 
+Description:
+Version:
 Autor: dreamy-xay
 Date: 2024-10-22 10:34:01
 LastEditors: dreamy-xay
@@ -16,7 +16,7 @@ from utils.parallel import WorkerParallel
 
 class BaseValidator(object):
     def __init__(self, predictor: BasePredictor = None):
-        # 预测器
+        # Predictor
         self.predictor = predictor
 
     def set_device(self, device):
@@ -26,12 +26,12 @@ class BaseValidator(object):
     def predict_one(self, image, *args, **kwargs):
         """
         Args:
-            - image (np.ndarray): 输入图像
-            - args (tuple): 其他参数，将作为参数传递给 self.pre_process, self.process, self.post_process 函数
-            - kwargs (dict): 其他参数，将作为参数传递给 self.pre_process, self.process, self.post_process 函数
+            - image (np.ndarray): Enter an image
+            - args (tuple): Other arguments, which will be passed as arguments to the self.pre_process, self.process, self.post_process functions
+            - kwargs (dict): Other arguments, which will be passed as arguments to the self.pre_process, self.process, self.post_process functions
 
         Returns:
-            - result (Any): 预测结果
+            - result (Any): predicts the outcome
         """
         if self.predictor is None:
             raise RuntimeError("This method cannot be called in evaluation mode.")
@@ -46,7 +46,7 @@ class BaseValidator(object):
 
     def run(self):
         """
-        验证器执行流程的主函数，必须实现
+        The main function of the validator execution process, which must be implemented
 
         Returns: None
         """
@@ -54,55 +54,55 @@ class BaseValidator(object):
 
     def infer(self, options):
         """
-        单进程单设备推理
+        Single-process, single-device inference
 
         Args:
-            - options: 必须含有以下属性
-                - source: 图片或视频文件夹路径
-                - device: 设备名称，如 "cuda:0" 或者 "cpu"
+            - options: must contain the following attributes:
+                - source: The path of the image or video folder
+                - device: The name of the device, e.g. "cuda:0" or "cpu"
 
         Returns:
-            - results: 返回推理的结果列表，列表的每一项具体如下
-                - type: 结果类型，"image" 或者 "video"
-                - name: 推理的文件名
-                - result: 推理的结果，为 BasePredictor.post_process 的返回值
+            - results: Returns a list of inference results, each of which is as follows
+                - type: Result type, "image" or "video"
+                - name: The name of the file for inference
+                - result: The result of the inference, which is the return value of BasePredictor.post_process
         """
-        # 设置设备
+        # Set up the device
         self.set_device(options.device)
 
-        # 开始预测
-        media_processor = MediaProcessor(options.source, None, self.predict_one, False)  # 图片视频加载运行器
+        # Start Forecasting
+        media_processor = MediaProcessor(options.source, None, self.predict_one, False)  # Picture and video loading runner
         results = media_processor.process(False, False)
 
         return results
 
     def parallel_infer(self, options):
         """
-        多进程（任意设备数）并行推理
+        Multi-process (any number of devices) parallel inference
 
         Args:
-            - options: 必须含有以下属性
-                - source: 图片或视频文件夹路径
-                - infer_workers: 单设备进程数
-                - devices: 设备列表，如 ['cuda:0', 'cuda:1', 'cpu', ...]，可以通过 BasePredictor._get_devices 获取
+            - options: must contain the following attributes:
+                - source: The path of the image or video folder
+                - infer_workers: the number of processes per device
+                - devices: A list of devices, such as ['cuda:0', 'cuda:1', 'cpu', ...], which can be obtained from BasePredictor._get_devices
 
         Returns:
-            - results: 返回推理的结果列表，列表的每一项具体如下
-                - type: 结果类型，"image" 或者 "video"
-                - name: 推理的文件名
-                - result: 推理的结果，为 BasePredictor.post_process 的返回值
+            - results: Returns a list of inference results, each of which is as follows
+                - type: Result type, "image" or "video"
+                - name: The name of the file for inference
+                - result: The result of the inference, which is the return value of BasePredictor.post_process
         """
-        # 加载所有图例图片
+        # Load all legend images
         file_path_list = MediaProcessor.get_file_paths(options.source)
-        # 初始化多进程推理进度条
+        # Initialize the multi-process inference progress bar
         progress_bar = WorkerParallel.SharedProgressBar(total=len(file_path_list), desc="Parallel Processing Media", unit="file")
 
-        # 设置每个进程单次推理的函数参数
+        # Set the function parameters for each process for a single inference
         infer_args_list = []
         for filename, file_path in file_path_list:
             infer_args_list.append((filename, file_path))
 
-        # 设置每个进程的共享参数
+        # Set the sharing parameters for each process
         worker_args_list = []
         for _ in range(options.infer_workers):
             for device in options.devices:
@@ -110,7 +110,7 @@ class BaseValidator(object):
                 setattr(cur_validator, "initialize_cuda_device", device)
                 worker_args_list.append((progress_bar, options, cur_validator))
 
-        # 定义一个单文件推理的函数
+        # Define a single-file inference function
         def parallel_infer(bar, options, validator, filename, file_path):
             initialize_cuda_device = getattr(validator, "initialize_cuda_device", None)
             if initialize_cuda_device is not None:
@@ -120,7 +120,7 @@ class BaseValidator(object):
             result = media_processor.process_file(bar, filename, file_path, False, False)
             return result
 
-        # 开始多进程推理
+        # Start multi-process inference
         worker_parallel = WorkerParallel(parallel_infer, infer_args_list, worker_args_list)
         results = worker_parallel.run()
         progress_bar.close()

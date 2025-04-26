@@ -36,25 +36,25 @@ class Debugger(object):
     @staticmethod
     def resize_image(image, scale):
         """
-        根据缩放因子调整图像大小
-        :param image: 输入图像（OpenCV 格式）
-        :param scale: 缩放因子（例如 0.5 表示缩小为原来的一半，2 表示放大为原来的两倍）
-        :return: 调整大小后的图像
+        Resize the image according to the zoom factor
+        :param image: input image (OpenCV format)
+        :param scale: Scale factor (e.g. 0.5 to shrink to half, 2 to double magnification)
+        :return: Resized image
         """
-        # 获取原始图像的尺寸
+        # Get the dimensions of the original image
         height, width = image.shape[:2]
 
-        # 计算新的尺寸
+        # Calculate the new dimensions
         new_width = int(width * scale)
         new_height = int(height * scale)
 
-        # 选择插值方法：放大时使用INTER_CUBIC，缩小时使用INTER_AREA
+        # Select the interpolation method: use INTER_CUBIC when zooming in, and INTER_AREA when zooming out
         if scale > 1:
-            interpolation = cv2.INTER_CUBIC  # 放大时使用三次插值
+            interpolation = cv2.INTER_CUBIC  # Use cubic interpolation when zooming in
         else:
-            interpolation = cv2.INTER_AREA  # 缩小时使用区域插值（质量较好）
+            interpolation = cv2.INTER_AREA  # Use region interpolation when zooming out (better quality)
 
-        # 调整图像大小
+        # Resize the image
         resized_image = cv2.resize(image, (new_width, new_height), interpolation=interpolation)
 
         return resized_image

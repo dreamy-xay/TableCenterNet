@@ -1,0 +1,11 @@
+python src/main.py mtable predict \
+    --model src/cfg/models/startsr-mtable.yaml \
+    --source datasets/WTW/test_images \
+    --model_path checkpoints/WTW/star/model_best.pth \
+    --device 0,1 \
+    --save \
+    --save_result \
+    --save_corners \
+    --workers 12 \
+    --project Test/WTW \
+    --name star

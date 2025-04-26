@@ -1,0 +1,26 @@
+name: TableCenterNet
+channels:
+  - defaults
+dependencies:
+  - pip=24.2=py38h06a4308_0
+  - python=3.8.20=he870216_0
+  - setuptools=75.1.0=py38h06a4308_0
+  - wheel=0.44.0=py38h06a4308_0
+  - pip:
+      - numpy==1.24.4
+      - opencv-contrib-python==4.11.0.86
+      - opencv-python==4.10.0.84
+      - openpyxl==3.1.5
+      - pandas==2.0.3
+      - pillow==10.4.0
+      - pycocotools==2.0.7
+      - scipy==1.10.1
+      # - scitsr==0.0.1
+      - shapely==2.0.6
+      - table-recognition-metric==0.0.4
+      - tabulate==0.9.0
+      - thop==0.1.1-2209072238
+      - timm==0.4.12
+      # - torch==2.4.0
+      # - torchvision==0.19.0
+      - tqdm==4.66.5

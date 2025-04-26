@@ -17,7 +17,7 @@ GLOBALS = globals()
 
 def create_model(model_yaml):
     with open(model_yaml, "r", encoding="utf-8") as f:
-        model_info = yaml.safe_load(f)  # 将YAML内容加载为字典
+        model_info = yaml.safe_load(f)  # Load the YAML content as a dictionary
 
         if model_info["name"] not in GLOBALS:
             raise ValueError(f"Unknown function name: {model_info['name']}")

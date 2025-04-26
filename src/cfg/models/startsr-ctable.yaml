@@ -1,14 +1,14 @@
 name: "get_startsr" # Name of the function to be called
 
 params:
-  arch: "s3" # StarNet 模型架构，可选 s1, s2, s3, s4, s050, s100, s150
+  arch: "s3" # StarNet model architecture, s1, s2, s3, s4, s050, s100, s150 are optional
   heads:
-    hm: 2 # 热力图
-    reg: 2 # 单元格角点和中心点偏移量
-    ct2cn: 8 # 中心点向量：中心点坐标 - 角点坐标
-    cn2ct: 8 # 角点向量：角点坐标 - 中心点坐标
-    lc: 2 # 单元格逻辑坐标
-    sp: 2 # 单元格跨度
+    hm: 2 # Heatmap
+    reg: 2 # Cell corner and center point offsets
+    ct2cn: 8 # Center Point Vector: Center Point Coordinates - Corner Point Coordinates
+    cn2ct: 8 # Corner Vector: Corner Coordinates - Center Point Coordinates
+    lc: 2 # Cell logical coordinates
+    sp: 2 # Cell span
 
-  head_conv: 256 # 头部隐藏层数
+  head_conv: 256 # The number of layers hidden in the head
 

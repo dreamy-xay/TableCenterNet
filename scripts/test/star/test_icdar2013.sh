@@ -1,0 +1,12 @@
+python src/main.py mtable predict \
+    --model src/cfg/models/startsr-mtable.yaml \
+    --source datasets/ICDAR2013/test_images \
+    --model_path checkpoints/ICDAR2013/star/model_best.pth \
+    --device 0,1 \
+    --save \
+    --save_result \
+    --save_corners \
+    --workers 12 \
+    --padding 100 \
+    --project Test/ICDAR2013 \
+    --name star

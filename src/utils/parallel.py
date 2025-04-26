@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-Description: 
-Version: 
+Description:
+Version:
 Autor: dreamy-xay
 Date: 2024-10-22 14:20:53
 LastEditors: dreamy-xay
@@ -192,34 +192,34 @@ class WorkerParallel:
             result_list.append((task_id, result))
 
     def run(self):
-        # 创建任务队列并填充任务
+        # Create a task queue and populate tasks
         task_queue = Queue()
         for i, task in enumerate(self.fun_args_list):
             task_queue.put((i, task))  # 将任务 ID 和数据添加到队列中
 
-        # 共享内存
+        # Shared memory
         manager = Manager()
 
-        # 创建结果队列，用于存放每个进程的推理结果
+        # Create a result queue to store the inference results of each process
         result_list = manager.list()
 
-        # 启动多个进程来处理任务
+        # Start multiple processes to process the task
         processes = []
         for worker_args in self.worker_args_list:
             process = Process(target=self._worker, args=(task_queue, result_list, self.func, worker_args))
             process.start()
             processes.append(process)
 
-        # 等待所有进程完成
+        # Wait for all processes to complete
         for process in processes:
             process.join()
 
-        # 收集所有推理结果
+        # Collect all inference results
         results = [None] * len(self.fun_args_list)
         for task_id, output in result_list:
             results[task_id] = output
 
-        # 关闭共享内存
+        # Turn off shared memory
         manager.shutdown()
 
         return results
@@ -260,15 +260,15 @@ class ComputateParallel:
 
     def run(self, use_process_pool=True) -> list:
         if use_process_pool:
-            # 设置全局函数包裹 self.func，防止 apply_async 函数序列化失败
+            # Set the global function to wrap self.func to prevent the apply_async function from failing to be serialized
             global _class_ComputateParallel_run_func_bind_
 
-            # 定义函数
+            # Define functions
             def _class_ComputateParallel_run_func_bind_(*args):
                 return self.func(*args)
 
             results = []
-            # 使用进度条并同时创建进程池
+            # Use the progress bar and create a process pool at the same time
             with Pool(processes=self.num_workers) as pool, tqdm(total=len(self.args_list), **self.tqdm_kwds) as bar:
                 processes = []
                 for args in self.args_list:
@@ -279,7 +279,7 @@ class ComputateParallel:
                     if self.postfix_map is not None:
                         bar.set_postfix(self.postfix_map(*args))
                     results.append(process.get())
-                    bar.update(1)  # 每次更新进度条，表示一个任务已提交
+                    bar.update(1)  # Each time the progress bar is updated, it means that a task has been submitted
 
                 if self.postfix_map is not None:
                     bar.set_postfix_str()
@@ -305,7 +305,7 @@ class ComputateParallel:
 
 
 def run_func(target, timeout):
-    # 创建一个队列用于传递返回值
+    # Create a queue to pass the return value
     result_queue = Queue()
 
     # 定义内部函数执行目标函数并将结果返回
@@ -316,21 +316,21 @@ def run_func(target, timeout):
         except:
             result_queue.put(None)
 
-    # 创建一个进程来运行目标函数W
+    # Create a process to run the objective function W
     process = Process(target=wrapper)
 
-    # 启动进程
+    # Start the process
     process.start()
 
-    # 等待进程结束，或超时
+    # Wait for the process to end, or time out
     process.join(timeout)
 
-    if process.is_alive():  # 如果超时，终止进程
+    if process.is_alive():  # If it times out, terminate the process
         process.terminate()
-        process.join()  # 确保进程结束
-        return None  # 超时返回 None
+        process.join()  # Make sure the process ends
+        return None  # Timeout returns None
     else:
-        # 获取进程的返回值
+        # Get the return value of the process
         if not result_queue.empty():
             return result_queue.get()
-        return None  # 如果没有返回值，也返回 None
+        return None  # If no value is returned, None is also returned

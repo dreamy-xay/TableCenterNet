@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-Description: 
-Version: 
+Description:
+Version:
 Autor: dreamy-xay
 Date: 2024-10-22 10:35:11
 LastEditors: dreamy-xay
@@ -22,7 +22,7 @@ class BaseArgParser(object):
         # *** task
         self.parser.add_argument("task", type=str, help="Tasks that need to be run.", choices=self._get_task_choices())
 
-        # *** 创建子解析器
+        # *** Create a child parser
         subparsers = self.parser.add_subparsers(dest="mode", required=True, help="The running mode of the task, currently including 'train', 'val', 'predict' three modes.")
 
         # *** mode train, val, predict
@@ -30,7 +30,7 @@ class BaseArgParser(object):
         val_parser = subparsers.add_parser("val", help="Validation mode.")
         predict_parser = subparsers.add_parser("predict", help="Prediction mode.")
 
-        # *** 公共参数
+        # *** Common parameters
         for mode_parser in [train_parser, val_parser, predict_parser]:
             mode_parser.add_argument("--project", type=str, default=None, help="Name of the project directory where training outputs are saved. Allows for organized storage of different experiments.")
             mode_parser.add_argument(
@@ -48,7 +48,7 @@ class BaseArgParser(object):
             )
             self.add_public_args(mode_parser)
 
-        # *** 训练参数
+        # *** Training parameters
         train_parser.add_argument(
             "--data",
             required=True,
@@ -92,7 +92,7 @@ class BaseArgParser(object):
             help="Resumes training from the last saved checkpoint. Automatically loads model weights, optimizer state, and epoch count, continuing training seamlessly.",
         )
 
-        # *** 验证参数
+        # *** Verify parameters
         val_parser.add_argument("--label", type=str, required=True, help="The path where the tag corresponding to the source file is located, which can be a file or a directory.")
         val_parser.add_argument("--only_eval", action="store_true", help="Whether to perform evaluation operations only?")
         val_parser.add_argument(
@@ -126,7 +126,7 @@ class BaseArgParser(object):
             help="Number of worker processes for Model is evaluating. The default value is -1, which indicates the number of CPU cores.",
         )
 
-        # *** 预测参数
+        # *** Prediction parameters
         predict_parser.add_argument(
             "--source",
             type=str,
@@ -156,104 +156,104 @@ class BaseArgParser(object):
         )
         predict_parser.add_argument("--save_result", action="store_true", help="Allows you to save the model's inference results to a specified folder instead of saving visualization images.")
 
-        # 额外新增参数
+        # Added additional parameters
         self.add_train_args(train_parser)
         self.add_val_args(val_parser)
         self.add_predict_args(predict_parser)
 
     def parse(self):
-        # *** 解析参数
+        # *** Parsing parameters
         self.args = self.parser.parse_args()
 
-        # *** 打印所有输入参数列表
+        # *** Print a list of all input parameters
         print("------------ Arguments -------------")
         for k, v in vars(self.args).items():
             print("%s=%s" % (str(k), str(v)), end=" ")
         print("\n------------------------------------")
 
-        # *** 路径处理
-        # 实验存储路径处理
+        # *** Path handling
+        # Experimental storage path processing
         self.args.project = self.args.project or os.path.join(DEFAULT_CFG["dirs"]["runs_dir"], self.args.task)
         self.args.project = os.path.join(ROOT_DIR, self.args.project)
         self.args.name = self.args.name or self.args.mode
-        # 设置实验的保存路径
+        # Set the path where the experiment will be saved
         self.args.save_dir = os.path.join(self.args.project, self.args.name)
-        # 如果 save_dir 已经存在，则自动增加一个数字后缀
+        # If save_dir already exists, a numeric suffix is automatically added
         if os.path.exists(self.args.save_dir):
-            # 是否重新恢复训练
+            # Whether to resume training
             is_resume = self.args.mode == "train" and self.args.resume and (self.args.model_path == "" or self._is_subdirectory(self.args.save_dir, self.args.model_path))
 
-            # 是否只验证模式
+            # Whether to verify only the mode
             is_only_eval = self.args.mode == "val" and self.args.only_eval
 
-            # 是否不覆盖原有文件夹
+            # Whether the original folder is not overwritten
             is_not_cover = not (is_resume or is_only_eval)
 
             if self.args.exist_ok:
                 if is_not_cover:
                     shutil.rmtree(self.args.save_dir)
-            elif is_not_cover:  # 除了少数模式(train: resume, val: only_eval, ...)，其他情况均重新创建序号文件夹
+            elif is_not_cover:  # Except for a few modes (train: resume, val: only_eval, ...), the sequence folder is recreated in all other cases
                 for i in range(1, 100000):
                     if not os.path.exists(self.args.save_dir + f"_{i}"):
                         self.args.save_dir += f"_{i}"
                         break
 
-        # *** 附加解析公开参数
+        # *** Additional parsing exposure parameters
         self.parse_public_args(self.args)
 
-        # *** 不同模式下参数处理
+        # *** Parameter processing in different modes
         if self.args.mode == "train":
-            # 设置实验中权重的保存路径
+            # Set the path to save the weights in the experiment
             self.args.save_weights_dir = os.path.join(self.args.save_dir, "weights")
-            # 设置实验中日志的保存路径
+            # Set the path where the logs in the experiment are saved
             self.args.save_log_dir = os.path.join(self.args.save_dir, "log")
-            # 创建目录
+            # Create a directory
             os.makedirs(self.args.save_weights_dir, exist_ok=True)
             os.makedirs(self.args.save_log_dir, exist_ok=True)
 
-            # 设置恢复训练路径
+            # Set the resume training path
             if self.args.resume:
-                # 如果恢复训练模型路径为空，则默认为项目路径下最后一个模型
+                # If the resume training model path is empty, the last model under the project path is defaulted
                 if self.args.model_path == "":
                     self.args.model_path = os.path.join(self.args.save_weights_dir, "model_last.pth")
-                # 如果恢复训练模型不存在则抛出异常
+                # If the recovery training model does not exist, an exception is thrown
                 if not os.path.exists(self.args.model_path):
                     raise ValueError(f"Model path '{self.args.model_path}' is not exist.")
 
-            # 附加解析训练参数
+            # Additional parsing training parameters
             self.parse_train_args(self.args)
         elif self.args.mode == "val":
-            # 设置实验中结果的保存路径
+            # Set the path to save the results in the experiment
             self.args.save_results_dir = os.path.join(self.args.save_dir, "results")
 
-            # 是否仅进行评估
+            # Whether or not to evaluate only
             if self.args.only_eval:
-                # 如果只评估，需要保证预测结果路径有效，标签路径有效
+                # If only the evaluation is carried out, you need to ensure that the prediction path and the label path are valid
                 if not os.path.exists(self.args.save_results_dir):
                     raise ValueError(f"Predict results path '{self.args.save_results_dir}' is not exist. Unable to evaluate!")
 
                 if not os.path.exists(self.args.label):
                     raise ValueError(f"Label path '{self.args.label}' is not exist. Unable to evaluate!")
             else:
-                # 创建目录
+                # Create a directory
                 os.makedirs(self.args.save_results_dir, exist_ok=True)
 
-            # 评估进程数目
+            # Number of evaluation processes
             if self.args.eval_workers < 1:
-                self.args.eval_workers = cpu_count()  # 如果异常则重置为cpu核心数目
+                self.args.eval_workers = cpu_count()  # If the abnormality is abnormal, reset to the number of CPU cores
 
-            # 附加解析验证参数
+            # Additional parsing validation parameters
             self.parse_val_args(self.args)
         elif self.args.mode == "predict":
-            # 设置实验中结果图片和视频的保存路径
+            # Set the path to save the result images and videos in the experiment
             self.args.save_shows_dir = os.path.join(self.args.save_dir, "shows")
-            # 设置实验中结果的保存路径
+            # Set the path to save the results in the experiment
             self.args.save_results_dir = os.path.join(self.args.save_dir, "results")
-            # 创建目录
+            # Create a directory
             os.makedirs(self.args.save_shows_dir, exist_ok=True)
             os.makedirs(self.args.save_results_dir, exist_ok=True)
 
-            # 附加解析预测参数
+            # Additional parsing prediction parameters
             self.parse_predict_args(self.args)
 
         return self.args
@@ -294,9 +294,9 @@ class BaseArgParser(object):
         return task_choices
 
     def _is_subdirectory(parent, child):
-        # 规范化路径
+        # Normalize paths
         parent = os.path.abspath(parent)
         child = os.path.abspath(child)
 
-        # 检查子目录
+        # Check the subdirectories
         return os.path.commonprefix([parent, child]) == parent and parent != child

@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-Description: 
-Version: 
+Description:
+Version:
 Autor: dreamy-xay
 Date: 2024-10-22 10:32:40
 LastEditors: dreamy-xay
@@ -37,7 +37,7 @@ class BaseTrainer(object):
         self.model_with_loss = ModleWithLoss(self.model, self.loss)
         self.total_epoch = None
 
-        # 调试、日志等参数
+        # Parameters such as debugging and logging
         self.is_debug = not getattr(self, "debug").__qualname__.startswith("BaseTrainer.")
         self.is_log = not getattr(self, "log").__qualname__.startswith("BaseTrainer.")
 
@@ -75,7 +75,7 @@ class BaseTrainer(object):
         return self
 
     def run_epoch(self, mode, epoch, data_loader, num_iters=-1):
-        # 获取模型推理和损失计算模块
+        # Get the Model Inference and Loss Calculation modules
         model_with_loss = self.model_with_loss
 
         if mode == "train":
@@ -141,7 +141,7 @@ class BaseTrainer(object):
 
     def run(self):
         """
-        训练器执行流程的主函数，必须实现
+        The main function of the trainer execution process, which must be implemented
 
         Returns: None
         """
@@ -159,7 +159,7 @@ class BaseTrainer(object):
 
         num_gpus = len(gpus)
 
-        # 多GPU训练时，每个GPU上的batch size
+        # The batch size on each GPU during multi-GPU training
         if master_batch_size == -1:
             master_batch_size = batch_size // num_gpus
         rest_batch_size = batch_size - master_batch_size

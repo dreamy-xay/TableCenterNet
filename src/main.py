@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-Description: 
-Version: 
+Description:
+Version:
 Autor: dreamy-xay
 Date: 2024-10-22 11:16:02
 LastEditors: dreamy-xay
@@ -35,5 +35,5 @@ def main(task):
 
 
 if __name__ == "__main__":
-    # 主函数
+    # Main function
     main(sys.argv[1] if len(sys.argv) >= 2 and not sys.argv[1].startswith("-") else "base")

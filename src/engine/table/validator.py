@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-Description: 
-Version: 
+Description:
+Version:
 Autor: dreamy-xay
 Date: 2024-10-22 10:34:01
 LastEditors: dreamy-xay
@@ -25,31 +25,31 @@ class TableValidator(BaseValidator):
     def __init__(self, args, predictor=None):
         self.args = args
 
-        # 初始化验证器
+        # Initialize the validator
         super().__init__(None if args.only_eval else (TablePredictor if predictor is None else predictor)(args))
 
-        # 加载 COCO 数据集标注文件作为金标准
+        # Load the COCO dataset annotation file as the gold standard
         self.coco = COCO(args.label)
 
         self.coco.loadImgs(self.coco.getImgIds())
 
-        # 加载 COCO 图片名映射
+        # Load the COCO image name mapping
         self.coco_map = {}
         for img in self.coco.dataset["images"]:
             self.coco_map[img["file_name"]] = img["id"]
 
     def run(self):
         if self.args.only_eval:
-            # 读取数据
+            # Read data
             results = self.read_results(self.args.save_results_dir)
         else:
-            devices = TablePredictor._get_devices(self.args.device)  # 获取推理所需GPU
-            is_parallel_infer = self.args.infer_workers * len(devices) > 1  # 是否并行推理
-            setattr(self.predictor.args, "save_corners", False)  # 设置其他参数
+            devices = TablePredictor._get_devices(self.args.device)  # Obtain the GPU required for inference
+            is_parallel_infer = self.args.infer_workers * len(devices) > 1  # Whether parallel reasoning is used
+            setattr(self.predictor.args, "save_corners", False)  # Set other parameters
 
             if is_parallel_infer and os.path.isdir(self.args.source):
                 print(f"Start multi-process inference. Using GPUs {devices}, and each GPU runs {self.args.infer_workers} processes in parallel.")
-                setattr(self.args, "devices", devices)  # 设置多进程设备列表
+                setattr(self.args, "devices", devices)  # Set the multi-process device list
                 results = self.parallel_infer(self.args)
             else:
                 if is_parallel_infer:
@@ -59,14 +59,14 @@ class TableValidator(BaseValidator):
 
                 results = self.infer(self.args)
 
-            # 保存预测结果
+            # Save the prediction results
             if self.args.save_result:
                 self.predictor.save_results(results, self.args.save_results_dir)
 
-        # 评估结果
+        # Evaluate the results
         coords_evaluate_reuslts, teds_evaluate_reuslts, scitsr_evaluate_reuslts, icdar_ar_evaluate_reuslts, crate_ar_evaluate_reuslts = self.evalute(results, self.args.evaluate_ious)
 
-        # 输出评估结果
+        # Output the evaluation result
         for threshold, item in coords_evaluate_reuslts.items():
             print(f"IoU {threshold}: Precision=>{item['avg']['P']}, Recall=>{item['avg']['R']}, F1=>{item['avg']['F1']}, Accuracy(LogicCoords)=>{item['avg']['L_Acc']}")
             print(
@@ -78,7 +78,7 @@ class TableValidator(BaseValidator):
         for tp, item in [("Scitsr", scitsr_evaluate_reuslts["avg"]), ("Crate", crate_ar_evaluate_reuslts)]:
             print(f"{tp}(Cell Adjacency Relation): Precision=>{item['P']}, Recall=>{item['R']}, F1=>{item['F1']}")
 
-        # 保存评估结果
+        # Save the evaluation results
         self.save_evaluate_results((coords_evaluate_reuslts, teds_evaluate_reuslts, scitsr_evaluate_reuslts, icdar_ar_evaluate_reuslts, crate_ar_evaluate_reuslts), self.args.save_dir)
 
     def read_results(self, results_path):
@@ -122,10 +122,10 @@ class TableValidator(BaseValidator):
         return results
 
     def evalute(self, pred_results, iou_thresholds):
-        # * 获取需要参与评估的全部参数
-        # 多进程评估参数列表
+        # * Get all the parameters you need to participate in the evaluation
+        # List of parameters for multi-process evaluation
         evalute_args_list = []
-        # 开始遍历
+        # Start traversal
         for pred_result in pred_results:
             image_name = pred_result["name"]
 
@@ -133,7 +133,7 @@ class TableValidator(BaseValidator):
                 print(f"Skip: {image_name}")
                 continue
 
-            # 获取预测结果的单元格列表
+            # Get a list of cells with the prediction result
             pred_cells = []
             for polygon in pred_result["result"][0]:
                 x1, y1, x2, y2, x3, y3, x4, y4 = [float(num) for num in polygon[:8]]
@@ -141,31 +141,31 @@ class TableValidator(BaseValidator):
                 pred_logic_coord = [max(0, int(num) - 1) for num in polygon[9:13]]  # [*polygon[11:13], *polygon[9:11]]
                 pred_cells.append([pred_physical_coord, pred_logic_coord])
 
-            # 获取标准单元格列表
+            # Get a list of standard cells
             gt_cells = []
             ann_ids = self.coco.getAnnIds(imgIds=[self.coco_map[image_name]])
             anns = self.coco.loadAnns(ids=ann_ids)
             for ann in anns:
-                # 从标签中取出角点
+                # Remove the corner points from the label
                 seg_mask = ann["segmentation"][0]
                 x1, y1 = seg_mask[0], seg_mask[1]
                 x2, y2 = seg_mask[2], seg_mask[3]
                 x3, y3 = seg_mask[4], seg_mask[5]
                 x4, y4 = seg_mask[6], seg_mask[7]
-                # 从标签中取出逻辑坐标
+                # Take out the logical coordinates from the tag
                 gt_physical_coord = [[x1, y1], [x2, y2], [x3, y3], [x4, y4]]
                 gt_logic_coord = [int(item) for item in ann["logic_axis"][0][:4]]
                 gt_cells.append([gt_physical_coord, gt_logic_coord, ann.get("table_id")])
 
             evalute_args_list.append((image_name, pred_cells, gt_cells))
 
-        # * 多进程评估：计算准确率
-        # 物理坐标PRF1评估器
+        # * Multi-process evaluation: Calculate accuracy
+        # Physical coordinates PRF1 evaluator
         CellEvaluator = PolygonEvaluator if self.args.evaluate_poly_iou else BoxEvaluator
-        # 计算IOU时使用不使用 union area，而使用 min area
+        # When calculating IOUs, use min area instead of union area
         union_area = not getattr(self.args, "not_union_area", False)
 
-        # 定义单张图片评估函数
+        # Define a single image evaluation function
         def parallel_evalute_table(image_name, pred_cells, gt_cells):
             gt_tables, is_multitable = LogAdjRelationEvaluator.split_tables_by_id(gt_cells)
             if is_multitable:
@@ -182,12 +182,12 @@ class TableValidator(BaseValidator):
                 ar_evaluator.evaluate_carte(),
             )
 
-        # 开始并行评估
+        # Start parallel assessments
         parallel_evalutor = ComputateParallel(parallel_evalute_table, evalute_args_list, self.args.eval_workers).set_tqdm(desc="Evaluate predict results")
         all_evaluate_reuslts = parallel_evalutor.run(False)
 
-        # * 整合评估参数并计算平均评估结果
-        # 物理坐标和逻辑坐标评估结果
+        # * Consolidate evaluation parameters and calculate average evaluation results
+        # Physical and logical coordinates are evaluated
         coords_evaluate_reuslts = {}
         for threshold in iou_thresholds:
             coords_evaluate_reuslts[threshold] = {
@@ -195,10 +195,10 @@ class TableValidator(BaseValidator):
                 "avg": {"num_images": 0, "P": 0.0, "R": 0.0, "F1": 0.0, "L_Acc": 0.0, "Lsr_Acc": 0.0, "Ler_Acc": 0.0, "Lsc_Acc": 0.0, "Lec_Acc": 0.0},
             }
 
-        # 逻辑坐标teds评估结果
+        # Logical coordinates TEDS evaluation results
         teds_evaluate_reuslts = {"images": [], "avg": {}}
 
-        # 单元格邻接关系评估结果
+        # Cell adjacency evaluation results
         scitsr_evaluate_reuslts = {
             "images": [],
             "avg": {"num_images": 0, "AR_P": 0.0, "AR_R": 0.0, "AR_F1": 0.0},
@@ -206,7 +206,7 @@ class TableValidator(BaseValidator):
         icdar_ar_evaluate_reuslts = {}
         crate_ar_evaluate_reuslts = {}
 
-        # 枚举每张图片评估结果
+        # Enumerate the evaluation results for each image
         for (
             image_name,
             tc_evalute_results,
@@ -215,14 +215,14 @@ class TableValidator(BaseValidator):
             _,
             _,
         ) in all_evaluate_reuslts:
-            # 存储评估结果
+            # Store the evaluation results
             for threshold, item in tc_evalute_results.items():
                 coords_evaluate_reuslts[threshold]["images"].append({"image_name": image_name, **item})
 
             teds_evaluate_reuslts["images"].append({"image_name": image_name, "TEDS": ts_evaluate_reuslts})
             scitsr_evaluate_reuslts["images"].append({"image_name": image_name, **sr_evaluate_reuslts})
 
-        # 计算物理坐标平均评估结果
+        # Calculate the average evaluation result of physical coordinates
         for evaluate_reuslt in coords_evaluate_reuslts.values():
             num_images = len(evaluate_reuslt["images"])
 
@@ -233,38 +233,38 @@ class TableValidator(BaseValidator):
 
             evaluate_reuslt["avg"]["num_images"] = num_images
 
-        # 计算逻辑坐标平均评估结果
+        # Calculate the average evaluation result of logical coordinates
         num_images = len(teds_evaluate_reuslts["images"])
         teds_evaluate_reuslts["avg"]["num_images"] = num_images
         teds_evaluate_reuslts["avg"]["TEDS"] = sum([item["TEDS"] for item in teds_evaluate_reuslts["images"]]) / num_images
 
-        # 计算单元格邻接关系平均评估结果（scitsr）
+        # Calculating Cell Adjacency Average Evaluation Results (SCITSR)
         num_images = len(scitsr_evaluate_reuslts["images"])
         scitsr_evaluate_reuslts["avg"]["num_images"] = num_images
         for metric in ["P", "R"]:
             scitsr_evaluate_reuslts["avg"][metric] = sum([item[metric] for item in scitsr_evaluate_reuslts["images"]]) / num_images
         scitsr_evaluate_reuslts["avg"]["F1"] = CellEvaluator.calc_f1_score(scitsr_evaluate_reuslts["avg"]["P"], scitsr_evaluate_reuslts["avg"]["R"])
 
-        # 计算单元格邻接关系平均评估结果（icdar2019）
+        # Calculating the Average Evaluation Results of Cell Adjacency Relationships (ICDAR2019)
         for i, ar_evaluate_reuslt in enumerate(LogAdjRelationEvaluator.average([results[4] for results in all_evaluate_reuslts])):
             icdar_ar_evaluate_reuslts[iou_thresholds[i]] = ar_evaluate_reuslt
 
-        # 计算单元格邻接关系平均评估结果（crate）
+        # Calculate Cell Adjacency Average Evaluation Result (Crate)
         crate_ar_evaluate_reuslts = LogAdjRelationEvaluator.average([results[5] for results in all_evaluate_reuslts], True)
 
         return coords_evaluate_reuslts, teds_evaluate_reuslts, scitsr_evaluate_reuslts, icdar_ar_evaluate_reuslts, crate_ar_evaluate_reuslts
 
     def save_evaluate_results(self, evaluate_reuslts, save_path):
-        # 解析
+        # Parsing
         coords_evaluate_reuslts, teds_evaluate_reuslts, scitsr_evaluate_reuslts, icdar_ar_evaluate_reuslts, crate_ar_evaluate_reuslts = evaluate_reuslts
 
-        # markdown 内容
-        markdown = "# 表格结构识别的评估结果"
+        # markdown content
+        markdown = "# The evaluation results of the table structure recognition"
 
-        # 创建一个 Excel writer 对象
+        # Create an Excel writer object
         excel_path = os.path.join(save_path, "evaluate_results.xlsx")
         with pd.ExcelWriter(excel_path) as writer:
-            # Step 1: 合并各 IoU 的 avg 值生成一张表
+            # Step 1: Merge the avg values of each IoU to generate a table
             avg_data = []
             for iou, data in coords_evaluate_reuslts.items():
                 avg_data.append({"IoU": iou, **data["avg"]})
@@ -272,35 +272,35 @@ class TableValidator(BaseValidator):
             avg_df = pd.DataFrame(avg_data)
             avg_df.rename(
                 columns={
-                    "IoU": "交并集比（IoU）",
-                    "num_images": "图像数量",
-                    "P": "精确率（Precision）",
-                    "R": "召回率（Recall）",
-                    "F1": "调和平均（F1）",
-                    "L_Acc": "逻辑坐标准确率（L_Acc）",
-                    "Lsr_Acc": "开始行准确率（Lsr_Acc）",
-                    "Ler_Acc": "结束行准确率（Ler_Acc）",
-                    "Lsc_Acc": "开始列准确率（Lsc_Acc）",
-                    "Lec_Acc": "结束列准确率（Lec_Acc）",
+                    "IoU": "IoU",
+                    "num_images": "Number of images",
+                    "P": "Precision",
+                    "R": "Recall",
+                    "F1": "F1",
+                    "L_Acc": "Logical Coordinate Accuracy (L_Acc)",
+                    "Lsr_Acc": "Start Row accuracy (Lsr_Acc)",
+                    "Ler_Acc": "End Row Accuracy (Ler_Acc)",
+                    "Lsc_Acc": "Start Column Accuracy (Lsc_Acc)",
+                    "Lec_Acc": "End Column Accuracy (Lec_Acc)",
                 },
                 inplace=True,
             )
             avg_df.to_excel(writer, sheet_name="Cells Physical and Logical Coordinate Avg Results", index=False)
 
-            # 使用 df.to_markdown 输出表格
+            # Use df.to_markdown to output tables
             markdown += "\n## Cells Physical and Logical Coordinate Avg Results\n"
             markdown += avg_df.to_markdown(index=False)
 
-            # Step 2: 生成一张逻辑坐标评估结果的表格
+            # Step 2: Generate a table of the results of the evaluation of the logical coordinates
             avg_df = pd.DataFrame([teds_evaluate_reuslts["avg"]])
-            avg_df.rename(columns={"num_images": "图像数量", "TEDS": "基于树编辑距离的相似度（TEDS）"}, inplace=True)
+            avg_df.rename(columns={"num_images": "Number of images", "TEDS": "TEDS"}, inplace=True)
             avg_df.to_excel(writer, sheet_name="Table Structure Avg Results", index=False)
 
-            # 使用 df.to_markdown 输出表格
+            # Use df.to_markdown to output tables
             markdown += "\n## Table Structure Avg Results\n"
             markdown += avg_df.to_markdown(index=False)
 
-            # Step 3: 合并各 IoU 的单元格邻接关系结果生成一张表
+            # Step 3: Merge the cell adjacency results of each IoU to generate a table
             avg_data = []
             for iou, data in icdar_ar_evaluate_reuslts.items():
                 avg_data.append({"Type": "ICDAR2019", "IoU": iou, "P": data["P"], "R": data["R"], "F1": data["F1"]})
@@ -309,52 +309,52 @@ class TableValidator(BaseValidator):
 
             avg_df = pd.DataFrame(avg_data)
             avg_df.rename(
-                columns={"Type": "评估代码类型", "IoU": "交并集比（IoU）", "P": "精确率（Precision）", "R": "召回率（Recall）", "F1": "调和平均（F1）"},
+                columns={"Type": "Type", "IoU": "IoU", "P": "Precision", "R": "Recall", "F1": "F1"},
                 inplace=True,
             )
             avg_df.to_excel(writer, sheet_name="Cells Adjacency Relation Avg Results", index=False)
 
-            # 使用 df.to_markdown 输出表格
+            # Use df.to_markdown to output tables
             markdown += "\n## Cells Adjacency Relation Avg Results\n"
             markdown += avg_df.to_markdown(index=False)
 
-            # Step 4: 每个 IoU 中的 images 生成单独的表格
-            # markdown += "\n## Cells Physical and Logical Coordinate Results"
+            # Step 4: Generate a separate table for the images in each IoU
+            # markdown  = "\n## Cells Physical and Logical Coordinate Results"
             for iou, data in coords_evaluate_reuslts.items():
                 images_df = pd.DataFrame(data["images"])
                 images_df.rename(
                     columns={
-                        "IoU": "交并集比（IoU）",
-                        "num_images": "图像数量",
-                        "P": "精确率（Precision）",
-                        "R": "召回率（Recall）",
-                        "F1": "调和平均（F1）",
-                        "L_Acc": "逻辑坐标准确率（L_Acc）",
-                        "Lsr_Acc": "开始行准确率（Lsr_Acc）",
-                        "Ler_Acc": "结束行准确率（Ler_Acc）",
-                        "Lsc_Acc": "开始列准确率（Lsc_Acc）",
-                        "Lec_Acc": "结束列准确率（Lec_Acc）",
+                        "IoU": "IoU",
+                        "num_images": "Number of images",
+                        "P": "Precision",
+                        "R": "Recall",
+                        "F1": "F1",
+                        "L_Acc": "Logical Coordinate Accuracy (L_Acc)",
+                        "Lsr_Acc": "Start Row accuracy (Lsr_Acc)",
+                        "Ler_Acc": "End Row Accuracy (Ler_Acc)",
+                        "Lsc_Acc": "Start Column Accuracy (Lsc_Acc)",
+                        "Lec_Acc": "End Column Accuracy (Lec_Acc)",
                     },
                     inplace=True,
                 )
                 images_df.to_excel(writer, sheet_name=f"IoU_{iou} => Cells Physical and Logical Coordinate Results", index=False)
 
-                # 使用 df.to_markdown 输出表格
-                # markdown += f"\n### IoU_{iou}\n"
-                # markdown += images_df.to_markdown(index=False)
+                # Use df.to_markdown to output tables
+                # markdown  = f"\n### IoU_{iou}\n"
+                # markdown  = images_df.to_markdown(index=False)
 
-            # Step 5: 逻辑坐标评估结果中的 images 生成单独的表格
+            # Step 5: Generate a separate table by the images in the logical coordinate evaluation results
             images_df = pd.DataFrame(teds_evaluate_reuslts["images"])
-            images_df.rename(columns={"image_name": "图像名", "TEDS": "基于树编辑距离的相似度（TEDS）"}, inplace=True)
+            images_df.rename(columns={"image_name": "Image Name", "TEDS": "TEDS"}, inplace=True)
             images_df.to_excel(writer, sheet_name="Table Structure Results", index=False)
 
-            # 使用 df.to_markdown 输出表格
-            # markdown += "\n## Table Structure Results\n"
-            # markdown += images_df.to_markdown(index=False)
+            # Use df.to_markdown to output tables
+            # markdown  = "\n## Table Structure Results\n"
+            # markdown  = images_df.to_markdown(index=False)
 
-        # 创建一个mrakdown文件并写入内容
+        # Create a mrakdown file and write the contents
         with open(os.path.join(save_path, "evaluate_results.md"), "w+") as f:
             f.write(markdown)
 
-        # 格式化 Excel 文件
+        # Format the Excel file
         format_excel(excel_path)

@@ -22,46 +22,46 @@ class LogicCoordLoss(torch.nn.Module):
 
     @staticmethod
     def _calc_span_weights(output1, output2, target):
-        # 计算 delta
+        # Calculate delta
         delta = (torch.abs(output1 - target) + torch.abs(output2 - target)) * 5.0  # diff * 10 / 2
         delta = torch.min(delta, torch.tensor(1.0))
 
-        # 计算 weight
+        # Calculate weight
         weight = torch.sin(1.570796 * delta)
 
         return weight
 
     @staticmethod
     def _calc_logic_weights(_, target):
-        # 计算 delta
+        # Calculate delta
         delta = 1.0 - torch.abs(target - torch.round(target))
 
-        # 计算 weight
+        # Calculate weight
         weight = torch.square(delta)
 
         return weight
 
     def forward(self, coord, span, lc_ind, lc_span, coord_gt, coord_mask, ct_ind, ct_mask):
         B = lc_span.size(0)
-        N = lc_span.size(1)  # 单元格数目
+        N = lc_span.size(1)  # Number of cells
 
-        # * 初始化数据
-        # 获取每个单元格对应角点的逻辑坐标以及掩模
+        # * Initialize the data
+        # Get the logical coordinates of the corresponding corner points of each cell and the mask
         coords_pred = _tranpose_and_gather_feat(coord, lc_ind.view(B, N * 4)).view(B, N, 4, 2)  # Bx4Nx2 -> BxNx4x2
         cols_pred = coords_pred[..., 0]  # BxNx4
         rows_pred = coords_pred[..., 1]  # BxNx4
 
-        # 获取每个单元格的跨度值以及掩模
+        # Get the span value of each cell as well as the mask
         span_pred = _tranpose_and_gather_feat(span, ct_ind)  # BxNx2
         span_mask = ct_mask.unsqueeze(2).expand(B, N, 2).float()  # BxNx2
         num_span_mask = span_mask.sum() + self.EPS
 
-        # * 计算逻辑坐标损失
+        # * Calculate the loss of logical coordinates
         coord_weight = self._calc_logic_weights(coord, coord_gt)
         coord_loss = F.l1_loss(coord * coord_mask * coord_weight, coord_gt * coord_mask * coord_weight, reduction="sum") / (coord_mask.sum() + self.EPS)
         # coord_loss = F.l1_loss(coord * coord_mask, coord_gt * coord_mask, reduction="sum") / (coord_mask.sum() + self.EPS)
 
-        # * 计算跨度损失所需权重
+        # * Calculate the weight required for span loss
         col_span_diff_pred = cols_pred[..., [1, 2]] - cols_pred[..., [0, 3]]  # BxNx2
         row_span_diff_pred = rows_pred[..., [3, 2]] - rows_pred[..., [0, 1]]  # BxNx2
         col_span_pred = span_pred[..., 0].unsqueeze(2).expand(B, N, 2)  # BxN -> BxNx2
@@ -72,14 +72,14 @@ class LogicCoordLoss(torch.nn.Module):
         row_span_weight = self._calc_span_weights(row_span_pred, row_span_diff_pred, row_span_gt)  # BxNx2
         span_weight = torch.stack([(col_span_weight[..., 0] + col_span_weight[..., 1]) / 2.0, (row_span_weight[..., 0] + row_span_weight[..., 1]) / 2.0], dim=-1)  # BxNx2
 
-        # * 计算逻辑坐标跨度误差损失
-        # 计算逻辑坐标列跨度误差损失
+        # * Calculate the loss of logical coordinate span error
+        # Calculate the error loss of the span of the logical coordinate column
         col_span_diff_loss = F.l1_loss(col_span_diff_pred * span_mask * col_span_weight, col_span_gt * span_mask * col_span_weight, reduction="sum") / num_span_mask
         # col_span_diff_loss = F.l1_loss(col_span_diff_pred * span_mask, col_span_gt * span_mask, reduction="sum") / num_span_mask
-        # 计算逻辑坐标行跨度误差损失
+        # Calculate the error loss of the logical coordinate row span
         row_span_diff_loss = F.l1_loss(row_span_diff_pred * span_mask * row_span_weight, row_span_gt * span_mask * row_span_weight, reduction="sum") / num_span_mask
         # row_span_diff_loss = F.l1_loss(row_span_diff_pred * span_mask, row_span_gt * span_mask, reduction="sum") / num_span_mask
-        # 统计总的逻辑坐标跨度误差损失
+        # Statistical loss of the total logical coordinate span error
         span_diff_loss = col_span_diff_loss + row_span_diff_loss
 
         # * 计算跨度损失
@@ -91,19 +91,19 @@ class LogicCoordLoss(torch.nn.Module):
     """
     def forward(self, coord, span, lc_ind, lc_span, coord_gt, coord_mask, ct_ind, ct_mask):
         B = lc_span.size(0)
-        N = lc_span.size(1)  # 单元格数目
+        N = lc_span.size(1)  # Number of cells
 
-        # * 初始化数据
-        # 获取每个单元格的跨度值以及掩模
+        # * Initialize the data
+        # Get the span value of each cell as well as the mask
         span_pred = _tranpose_and_gather_feat(span, ct_ind)  # BxNx2
         span_mask = ct_mask.unsqueeze(2).expand(B, N, 2).float()  # BxNx2
         num_span_mask = span_mask.sum() + self.EPS
 
-        # * 计算逻辑坐标损失
+        # * Calculate the loss of logical coordinates
         # coord_weight = self._calc_logic_weights(coord, coord_gt)
         coord_loss = F.l1_loss(coord * coord_mask, coord_gt * coord_mask, reduction="sum") / (coord_mask.sum() + self.EPS)
 
-        # * 计算跨度损失
+        # * Calculate span losses
         span_loss = F.l1_loss(span_pred * span_mask, lc_span * span_mask, reduction="sum") / num_span_mask
 
         return coord_loss, torch.tensor(0.0, device=coord_loss.device), span_loss

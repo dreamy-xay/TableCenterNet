@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-Description: 
-Version: 
+Description:
+Version:
 Autor: dreamy-xay
 Date: 2024-11-04 21:05:22
 LastEditors: dreamy-xay
@@ -19,21 +19,21 @@ import cv2
 
 
 def split_polygon(polygon):
-    """将多边形分割为多个三角形，支持凹多边形"""
+    """Split a polygon into multiple triangles, support concave polygons"""
     try:
-        # 创建一个凹多边形
+        # Create a concave polygon
         cur_polygon = Polygon([(x, y) for x, y, _ in polygon])
     except:
         return []
 
-    # 如果多边形无效，则尝试进行修复
+    # If the polygon is invalid, try to fix it
     if not cur_polygon.is_valid:
         cur_polygon = make_valid(cur_polygon)
 
         if not cur_polygon.is_valid:
             return []
     try:
-        # 使用Shapely的triangulate进行三角剖分
+        # Triangulate with Shapely's triangulate
         triangles = triangulate(cur_polygon)
     except:
         return []
@@ -42,7 +42,7 @@ def split_polygon(polygon):
     for x, y, v in polygon:
         point_map[(x, y)] = v
 
-    # 将三角形转化为带有v值的多边形
+    # Convert triangles to polygons with v-values
     new_triangles = []
     for triangle in triangles:
         try:
@@ -50,9 +50,9 @@ def split_polygon(polygon):
                 continue
         except:
             continue
-        # 获取三角形的所有顶点坐标
+        # Get all the vertex coordinates of the triangle
         triangle_points = list(triangle.exterior.coords)
-        # 为每个顶点添加v值
+        # Add a v-value for each vertex
         try:
             triangle_v = [(x, y, point_map[(x, y)]) for (x, y) in triangle_points[:-1]]
         except:
@@ -63,67 +63,67 @@ def split_polygon(polygon):
 
 
 def polygon_area(points):
-    """计算多边形的面积"""
+    """Calculate the area of the polygon"""
     x, y = zip(*points)
     return 0.5 * np.abs(np.dot(x, np.roll(y, 1)) - np.dot(y, np.roll(x, 1)))
 
 
 def interpolate_polygons(polygons, img_size, processes=["sort"]):
     """
-    插值多边形
+    Interpolation polygons
 
-    参数：
-        polygons: 多边形列表，每个多边形是一个包含(x, y, v)的列表，v表示要插的值
+    Parameters:
+        polygons: A list of polygons, each polygon is a list containing (x, y, v), where v represents the value to be interpolated
         img_size: (height, width)
-        process: 预处理类型，可选值有"sort"和"split"，"split"支持凹多边形分解为多个三角形，"sort"按面积排序
-    返回：
-        final_image: 插值后的图像
-        mask: 掩码，用于区分插值区域和背景区域
+        process: Preprocessing type, the optional values are "sort" and "split", "split" supports the decomposition of concave polygons into multiple triangles, and "sort" sorts by area
+    Returns:
+        final_image: The interpolated image
+        mask: A mask that distinguishes between the interpolation and background regions
     """
-    # 初始化一个全为0的图像和全为False的掩码
+    # Initialize an all-0 image and an all-false mask
     final_image = np.zeros(img_size, dtype=np.float32)
     mask = np.zeros(img_size, dtype=bool)
 
     processed_polygons = polygons
-    # 预处理多边形
+    # Preprocess polygons
     for process in processes:
         if process == "sort":
-            # 计算每个多边形的面积
+            # Calculate the area of each polygon
             areas = [polygon_area([(x, y) for x, y, _ in polygon]) for polygon in processed_polygons]
 
-            # 按面积排序
+            # Sort by area
             processed_polygons = [polygon for _, polygon in sorted(zip(areas, processed_polygons))]
         elif process == "split":
-            # 将多边形分割为多个三角形
+            # Split the polygon into triangles
             new_processed_polygons = []
             for polygon in processed_polygons:
                 new_processed_polygons.extend(split_polygon(polygon))
             processed_polygons = new_processed_polygons
 
-    # 对每个多边形进行插值
+    # Interpolate each polygon
     for polygon in processed_polygons:
-        # 获取 bbox
+        # Get bbox
         x_min = math.floor(min(x for x, y, _ in polygon))
         y_min = math.floor(min(y for x, y, _ in polygon))
         x_max = math.ceil(max(x for x, y, _ in polygon))
         y_max = math.ceil(max(y for x, y, _ in polygon))
         bbox = (x_min, y_min, x_max - x_min + 1, y_max - y_min + 1)
 
-        # 提取点和值
+        # Extract points and values
         points = np.array([(x - bbox[0], y - bbox[1]) for x, y, _ in polygon], dtype=np.float32)
         values = np.array([v for _, _, v in polygon], dtype=np.float32)
 
-        # 创建网格
+        # Create a mesh
         x, y = np.meshgrid(np.arange(bbox[2]), np.arange(bbox[3]))
         grid_points = np.vstack((x.ravel(), y.ravel())).T
 
-        # 插值
+        # Interpolation
         try:
             interpolated_values = griddata(points, values, grid_points, method="linear", fill_value=-1)
         except:
             continue
 
-        # 将插值结果叠加到最终图像上，并更新掩码
+        # Overlay the interpolation result onto the final image and update the mask
         for (i, j), value in zip(grid_points, interpolated_values):
             i += bbox[0]
             j += bbox[1]
@@ -159,13 +159,13 @@ class Line:
 
     @staticmethod
     def fit_line(points, eps=1e-6):
-        # 使用 cv2.fitLine 拟合直线
+        # Use cv2.fitLine to fit the line
         line = cv2.fitLine(points, cv2.DIST_L2, 0, 0.01, 0.01)
 
-        # 解析输出
+        # Parse the output
         vx, vy, x0, y0 = line.flatten()
 
-        # 计算直线方程 ax + by + c = 0 的参数
+        # Calculate the parameters of the linear equation ax by c = 0
         a = float(-vy if abs(vy) > eps else 0)
         b = float(vx if abs(vx) > eps else 0)
         c = float(-(a * x0 + b * y0))
@@ -173,7 +173,7 @@ class Line:
 
 
 def split_unicom_area(cells, adjacent_thresh=1):
-    # 并查集分割
+    # And check the set split
     num_cells = len(cells)
     parent = [i for i in range(num_cells)]
 
@@ -189,14 +189,14 @@ def split_unicom_area(cells, adjacent_thresh=1):
             parent[root_y] = root_x
 
     def get_polygon_scale_kargs(polygon, value):
-        # 获取多边形的边界框 (Bounding Box)
+        # Get the Bounding Box of a Polygon
         minx, miny, maxx, maxy = polygon.bounds
 
-        # 计算宽度和高度
+        # Calculate width and height
         width = maxx - minx
         height = maxy - miny
 
-        # 计算缩放因子
+        # Calculate the scale factor
         xfact = (width + 2 * value) / width
         yfact = (height + 2 * value) / height
 
@@ -210,7 +210,7 @@ def split_unicom_area(cells, adjacent_thresh=1):
             if scale_polygons[i].intersects(polygons[j]):
                 union(i, j)
 
-    # 将并查集结果转换为连通区域
+    # Convert the results of the merge search to a connected region
     connected_components = {}
     for i in range(num_cells):
         root = find(i)
@@ -220,49 +220,51 @@ def split_unicom_area(cells, adjacent_thresh=1):
 
     return list(connected_components.values())
 
+
 def simple_interpolate_cells(cells, img_size):
     """
-    在图像中插值单元格
+    Interpolate cells in an image
 
-    参数：
-        cells: 单元格的顶点列表，每个顶点是一个元组 (x, y, col, row)
-        img_size: 图像的尺寸，用于初始化图像和掩码
-    返回值：
-        final_image: 插值后的图像
-        mask: 掩码，用于标记插值后的像素
+    Parameters:
+        cells: a list of vertices in a cell, each vertex is a tuple (x, y, col, row)
+        img_size: The size of the image, which is used to initialize the image and mask
+    Returns:
+        final_image: The interpolated image
+        mask: Mask, which is used to mark the interpolated pixels
     """
     cols = []
     rows = []
-    
-    # 获取单元格框
+
+    # Get Cell Box
     for cell in cells:
         cols.append([point[:3] for point in cell])
         rows.append([[point[0], point[1], point[3]] for point in cell])
 
-    # 生成插值图
+    # Generate interpolation plots
     col_final_image, col_mask = interpolate_polygons(cols, img_size, ["sort"])
     row_final_image, row_mask = interpolate_polygons(rows, img_size, ["sort"])
 
     return np.stack([col_final_image, row_final_image], axis=0), np.stack([col_mask, row_mask], axis=0)
 
+
 def interpolate_cells(cells, img_size, adjacent_thresh=1):
     """
-    在图像中插值单元格
+    Interpolate cells in an image
 
-    参数：
-        cells: 单元格的顶点列表，每个顶点是一个元组 (x, y, col, row)
-        img_size: 图像的尺寸，用于初始化图像和掩码
-        adjacent_thresh: 邻近阈值，用于确定单元格的边界
-    返回值：
-        final_image: 插值后的图像
-        mask: 掩码，用于标记插值后的像素
+    Parameters:
+        cells: a list of vertices in a cell, each vertex is a tuple (x, y, col, row)
+        img_size: The size of the image, which is used to initialize the image and mask
+        adjacent_thresh: Proximity threshold, which is used to determine the boundaries of cells
+    Returns:
+        final_image: The interpolated image
+        mask: Mask, which is used to mark the interpolated pixels
     """
     cols = []
     rows = []
-    # 获取新的行列框
+    # Get a new row and column box
     for area_cells_index in split_unicom_area(cells, adjacent_thresh):
         area_cells = [cells[i] for i in area_cells_index]
-        # 计算最大列和行
+        # Calculate the maximum number of columns and rows
         max_cols = max(max(point[2] for point in cell) for cell in area_cells)
         max_rows = max(max(point[3] for point in cell) for cell in area_cells)
 
@@ -274,19 +276,19 @@ def interpolate_cells(cells, img_size, adjacent_thresh=1):
                 col_points_list[point[2] - 1].append(point)
                 row_points_list[point[3] - 1].append(point)
 
-        # 排序
+        # Sorting
         for points in col_points_list:
             points.sort(key=lambda pt: pt[1])
         for points in row_points_list:
             points.sort(key=lambda pt: pt[0])
 
-        # 获取边界线
+        # Get Boundary Lines
         upper_line, upper_bound = Line(row_points_list[0]), row_points_list[0]
         lower_line, lower_bound = Line(row_points_list[-1]), row_points_list[-1]
         left_line, left_bound = Line(col_points_list[0]), col_points_list[0]
         right_line, right_bound = Line(col_points_list[-1]), col_points_list[-1]
 
-        # 补全列坐标
+        # Complete column coordinates
         for col, points in enumerate(col_points_list):
             if len(points) < 2:
                 continue
@@ -312,7 +314,7 @@ def interpolate_cells(cells, img_size, adjacent_thresh=1):
                 except:
                     pass
 
-        # 补全行坐标
+        # Complete the row coordinates
         for row, points in enumerate(row_points_list):
             if len(points) < 2:
                 continue
@@ -338,7 +340,7 @@ def interpolate_cells(cells, img_size, adjacent_thresh=1):
                 except:
                     pass
 
-        # 重新排序
+        # Reorder
         for i in range(max_cols):
             col_points_list[i] = [point[:3] for point in col_points_list[i]]
             col_points_list[i].sort(key=lambda pt: pt[1])
@@ -354,7 +356,7 @@ def interpolate_cells(cells, img_size, adjacent_thresh=1):
             rows.append(row_points_list[i - 1])
             rows[-1].extend(row_points_list[i][::-1])
 
-    # 生成插值图
+    # Generate interpolation plots
     col_final_image, col_mask = interpolate_polygons(cols, img_size, ["split"])
     row_final_image, row_mask = interpolate_polygons(rows, img_size, ["split"])
 
@@ -363,19 +365,19 @@ def interpolate_cells(cells, img_size, adjacent_thresh=1):
 
 def multitable_interpolate_cells(cells, img_size):
     """
-    在图像中插值单元格
+    Interpolate cells in an image
 
-    参数：
-        cells: 单元格的顶点列表 [corner1, ..., table_id]，每个顶点是一个元组 (x, y, col, row)
-        img_size: 图像的尺寸，用于初始化图像和掩码
-    返回值：
-        final_image: 插值后的图像
-        mask: 掩码，用于标记插值后的像素
+    Parameters:
+        cells: a list of vertices of a cell [corner1, ..., table_id], each vertex is a tuple (x, y, col, row)
+        img_size: The size of the image, which is used to initialize the image and mask
+    Returns:
+        final_image: The interpolated image
+        mask: Mask, which is used to mark the interpolated pixels
     """
     cols = []
     rows = []
 
-    # 分割表格区域
+    # Split the table area
     tables = {}
     for cell in cells:
         table_id = cell[-1]
@@ -384,9 +386,9 @@ def multitable_interpolate_cells(cells, img_size):
 
         tables[table_id].append(cell[:-1])
 
-    # 获取新的行列框
+    # Get a new row and column box
     for area_cells in tables.values():
-        # 计算最大列和行
+        # Calculate the maximum number of columns and rows
         max_cols = max(max(point[2] for point in cell) for cell in area_cells)
         max_rows = max(max(point[3] for point in cell) for cell in area_cells)
 
@@ -398,19 +400,19 @@ def multitable_interpolate_cells(cells, img_size):
                 col_points_list[point[2] - 1].append(point)
                 row_points_list[point[3] - 1].append(point)
 
-        # 排序
+        # Sorting
         for points in col_points_list:
             points.sort(key=lambda pt: pt[1])
         for points in row_points_list:
             points.sort(key=lambda pt: pt[0])
 
-        # 获取边界线
+        # Get Boundary Lines
         upper_line, upper_bound = Line(row_points_list[0]), row_points_list[0]
         lower_line, lower_bound = Line(row_points_list[-1]), row_points_list[-1]
         left_line, left_bound = Line(col_points_list[0]), col_points_list[0]
         right_line, right_bound = Line(col_points_list[-1]), col_points_list[-1]
 
-        # 补全列坐标
+        # Complete column coordinates
         for col, points in enumerate(col_points_list):
             if len(points) < 2:
                 continue
@@ -436,7 +438,7 @@ def multitable_interpolate_cells(cells, img_size):
                 except:
                     pass
 
-        # 补全行坐标
+        # Complete the row coordinates
         for row, points in enumerate(row_points_list):
             if len(points) < 2:
                 continue
@@ -462,7 +464,7 @@ def multitable_interpolate_cells(cells, img_size):
                 except:
                     pass
 
-        # 重新排序
+        # Reorder
         for i in range(max_cols):
             col_points_list[i] = [point[:3] for point in col_points_list[i]]
             col_points_list[i].sort(key=lambda pt: pt[1])
@@ -478,7 +480,7 @@ def multitable_interpolate_cells(cells, img_size):
             rows.append(row_points_list[i - 1])
             rows[-1].extend(row_points_list[i][::-1])
 
-    # 生成插值图
+    # Generate interpolation plots
     col_final_image, col_mask = interpolate_polygons(cols, img_size, ["split"])
     row_final_image, row_mask = interpolate_polygons(rows, img_size, ["split"])
 
@@ -486,51 +488,51 @@ def multitable_interpolate_cells(cells, img_size):
 
 
 def line_interpolation(img, p1, p2, value):
-    """在图像中插值两个点之间的像素"""
-    # 获取两个点的坐标
+    """Interpolate pixels between two points in an image"""
+    # Get the coordinates of two points
     x1, y1 = p1[:2]
     x2, y2 = p2[:2]
 
-    # 计算步长
+    # Calculate the step size
     num_step = max(abs(x2 - x1), abs(y2 - y1))
     step_x = (x2 - x1) / (num_step + 1e-6)
     step_y = (y2 - y1) / (num_step + 1e-6)
 
-    # 获取图像宽高
+    # Get image width and height
     img_height, img_width = img.shape[:2]
 
-    # 根据距离插值出所有中间点
+    # All intermediate points are interpolated based on distance
     for i in range(num_step + 1):
         x = round(x1 + i * step_x)
         y = round(y1 + i * step_y)
 
-        # 保证坐标在图像范围内
+        # Make sure the coordinates are within the image range
         if 0 <= x < img_width and 0 <= y < img_height:
-            img[y, x] = value  # 插值
+            img[y, x] = value  # Interpolation
 
     return img
 
 
 def interpolate_cells_edges(cells, img_size, extend_pixel=8):
     """
-    在图像中插值单元格的边缘
+    Interpolate the edges of cells in an image
 
-    参数：
-        cells: 单元格的顶点列表，每个顶点是一个元组 (x, y, col, row)
-        img_size: 图像的尺寸，用于初始化图像和掩码
-        extend_pixel: 扩展像素数，用于扩展单元格的边缘
-    返回值：
-        final_image: 插值后的图像
-        mask: 掩码，用于标记插值后的像素
+    Parameters:
+        cells: a list of vertices in a cell, each vertex is a tuple (x, y, col, row)
+        img_size: The size of the image, which is used to initialize the image and mask
+        extend_pixel: Expands the number of pixels, which is used to expand the edges of the cell
+    Returns:
+        final_image: The interpolated image
+        mask: Mask, which is used to mark the interpolated pixels
     """
-    # 初始化一个全为0的图像和全为False的掩码
+    # Initialize an all-0 image and an all-false mask
     col_final_image = np.zeros(img_size, dtype=np.float32)
     row_final_image = np.zeros(img_size, dtype=np.float32)
     mask = np.zeros(img_size, dtype=np.uint8)
 
     for area_cells_index in split_unicom_area(cells):
         area_cells = [cells[i] for i in area_cells_index]
-        # 计算最大列和行
+        # Calculate the maximum number of columns and rows
         max_cols = max(max(point[2] for point in cell) for cell in area_cells)
         max_rows = max(max(point[3] for point in cell) for cell in area_cells)
 
@@ -542,19 +544,19 @@ def interpolate_cells_edges(cells, img_size, extend_pixel=8):
                 col_points_list[point[2] - 1].append(point)
                 row_points_list[point[3] - 1].append(point)
 
-        # 排序
+        # Sorting
         for points in col_points_list:
             points.sort(key=lambda pt: pt[1])
         for points in row_points_list:
             points.sort(key=lambda pt: pt[0])
 
-        # 获取边界线
+        # Get Boundary Lines
         upper_line, upper_bound = Line(row_points_list[0]), row_points_list[0]
         lower_line, lower_bound = Line(row_points_list[-1]), row_points_list[-1]
         left_line, left_bound = Line(col_points_list[0]), col_points_list[0]
         right_line, right_bound = Line(col_points_list[-1]), col_points_list[-1]
 
-        # 补全列坐标
+        # Complete column coordinates
         for col, points in enumerate(col_points_list):
             cur_line = Line(points)
             col += 1
@@ -567,7 +569,7 @@ def interpolate_cells_edges(cells, img_size, extend_pixel=8):
                 points.append(instersection)
                 lower_bound.append(instersection)
 
-        # 补全行坐标
+        # Complete the row coordinates
         for row, points in enumerate(row_points_list):
             cur_line = Line(points)
             row += 1
@@ -580,7 +582,7 @@ def interpolate_cells_edges(cells, img_size, extend_pixel=8):
                 points.append(instersection)
                 right_bound.append(instersection)
 
-        # 重新排序
+        # Reorder
         for points in col_points_list:
             for point in points:
                 point[0], point[1] = round(point[0]), round(point[1])
@@ -593,17 +595,17 @@ def interpolate_cells_edges(cells, img_size, extend_pixel=8):
         area = [point[:2] for point in [*upper_bound, *right_bound, *lower_bound[::-1], *left_bound[::-1]]]
         area = np.array([area], dtype=np.int32)
 
-        # 更新mask
+        # Update the mask
         cv2.fillPoly(mask, area, 1.0)
         cv2.polylines(mask, area, True, 1.0, thickness=extend_pixel * 2 + 1)
 
-        # 列插值
+        # Column interpolation
         for col, points in enumerate(col_points_list):
             col += 1
             for j in range(len(points) - 1):
                 line_interpolation(col_final_image, points[j], points[j + 1], col)
 
-        # 行插值
+        # Row interpolation
         for row, points in enumerate(row_points_list):
             row += 1
             for j in range(len(points) - 1):

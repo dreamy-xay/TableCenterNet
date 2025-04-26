@@ -1,0 +1,11 @@
+python src/main.py mtable val \
+    --model src/cfg/models/startsr-mtable.yaml \
+    --source datasets/ICDAR2013/wired_test_images \
+    --model_path checkpoints/WTW/star/model_best.pth \
+    --label datasets/ICDAR2013/labels/wired_test.json \
+    --device 0,1 \
+    --save_result \
+    --infer_workers 12 \
+    --padding 100 \
+    --project Val/ICDAR2013 \
+    --name star_wired
