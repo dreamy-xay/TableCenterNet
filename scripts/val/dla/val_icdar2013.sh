@@ -6,6 +6,5 @@ python src/main.py mtable val \
     --device 0,1 \
     --save_result \
     --infer_workers 12 \
-    --padding 100 \
     --project Val/ICDAR2013 \
     --name dla

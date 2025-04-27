@@ -1,7 +1,7 @@
 python src/main.py mtable val \
     --model src/cfg/models/dlatsr-mtable.yaml \
     --source datasets/ICDAR2013/wired_test_images \
-    --model_path checkpoints/WTW/dla/model_best.pth \
+    --model_path checkpoints/WTW/dla/model_last.pth \
     --label datasets/ICDAR2013/labels/wired_test.json \
     --device 0,1 \
     --save_result \

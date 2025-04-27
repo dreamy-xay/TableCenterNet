@@ -1,7 +1,12 @@
-# Towards One-Stage End-to-End Table Structure Recognition with Parallel Regression for Diverse Scenarios
-> Anyi Xiao and Cihui Yang. "Towards One-Stage End-to-End Table Structure Recognition with Parallel Regression for Diverse Scenarios." arXiv preprint arXiv:2504.17522 (2025).
+<div id="top" align="center">
 
-The official PyTorch implementation of TableCenterNet. The preview version has released at arXiv.org (<https://arxiv.org/abs/2504.17522>). 
+# Towards One-Stage End-to-End Table Structure Recognition with Parallel Regression for Diverse Scenarios
+
+  Anyi Xiao and Cihui Yang* </br>
+
+  [![arXiv](https://img.shields.io/badge/arXiv-2504.17522-b31b1b.svg)](http://arxiv.org/abs/2504.17522)
+
+</div> 
 
 ## Abstract
 Table structure recognition aims to parse tables in unstructured data into machine-understandable formats. Recent methods address this problem through a two-stage process or optimized one-stage approaches. However, these methods either require multiple networks to be serially trained and perform more time-consuming sequential decoding, or rely on complex post-processing algorithms to parse the logical structure of tables. They struggle to balance cross-scenario adaptability, robustness, and computational efficiency. In this paper, we propose a one-stage end-to-end table structure parsing network called TableCenterNet. This network unifies the prediction of table spatial and logical structure into a parallel regression task for the first time, and implicitly learns the spatial-logical location mapping laws of cells through a synergistic architecture of shared feature extraction layers and task-specific decoding. Compared with two-stage methods, our method is easier to train and faster to infer. Experiments on benchmark datasets show that TableCenterNet can effectively parse table structures in diverse scenarios and achieve state-of-the-art performance on the TableGraph-24k dataset. 
@@ -27,22 +32,16 @@ dependencies:
       - pandas==2.0.3
       - pillow==10.4.0
       - pycocotools==2.0.7
+      - pyyaml==6.0.2
       - scipy==1.10.1
       - shapely==2.0.6
       - table-recognition-metric==0.0.4
       - tabulate==0.9.0
       - thop==0.1.1-2209072238
       - timm==0.4.12
+      - torch==2.4.0
+      - torchvision==0.19.0
       - tqdm==4.66.5
-```
-
-### Installing Torch
-```
-# CUDA 11.8
-pip3 install torch torchvision --index-url https://download.pytorch.org/whl/cu118
-
-# CUDA 12.6
-pip3 install torch torchvision --index-url https://download.pytorch.org/whl/cu126
 ```
 
 ### Installing SciTSR
@@ -60,26 +59,26 @@ pip install dist/scitsr-0.0.1-py3-none-any.whl
 - Doownload datasets from [Releases](https://github.com/dreamy-xay/releases/tag/v1.0).
 - Put `datasets.tar.gz` in **"./datasets/"** and unzip it.
 ```
-cd ./datasets
+cd TableCenterNet/datasets
 tar -zxvf datasets.tar.gz
 ## The './datasets/' folder should look like:
-- datasets/
-  - ICDAR2013/
-  - WTW/
-  - TG24K/
+checkpoints
+├─── ICDAR2013
+├─── WTW
+└─── TG24K
 ```
 
 ### Pretrained Models
 - Download pretrained models from [Releases](https://github.com/dreamy-xay/TableCenterNet/releases/tag/v1.0).
 - Put `checkpoints.tar.gz` in **"./checkpoints/"** and unzip it.
 ```
-cd ./checkpoints
+cd TableCenterNet/checkpoints
 tar -zxvf checkpoints.tar.gz
 ## The './checkpoints/' folder should look like:
-- checkpoints/
-  - ICDAR2013/
-  - WTW/
-  - TG24K/
+checkpoints
+├─── ICDAR2013
+├─── WTW
+└─── TG24K
 ```
 
 ## Testing
@@ -105,11 +104,11 @@ where `${BACKBONE}` should be replaced with “dla” or “star” to indicate 
 
 ## Training
 
-We have prepared the training scripts, note that ${BACKBONE} needs to be replaced with “dla” and “star” before running the script, command line as following:
+We have prepared the training scripts. Note that ${BACKBONE} needs to be replaced with “dla” and “star” before running the script. The command line is as follows:
 ```
 cd TableCenterNet/src
 
-# Train ICDAR2013
+# Fine-tuning ICDAR2013
 sh scripts/train/${BACKBONE}/train_icdar2013.sh
 
 # Train WTW
@@ -132,7 +131,7 @@ Then configure the loading and preprocessing strategies for the dataset. Specifi
 
 ## Evaluating
 
-Execute the following script to evaluate TableCenterNet:
+Execute the following scripts to evaluate TableCenterNet:
 ```
 cd TableCenterNet
 

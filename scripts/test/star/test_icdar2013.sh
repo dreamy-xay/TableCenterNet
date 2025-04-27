@@ -7,6 +7,5 @@ python src/main.py mtable predict \
     --save_result \
     --save_corners \
     --workers 12 \
-    --padding 100 \
     --project Test/ICDAR2013 \
     --name star

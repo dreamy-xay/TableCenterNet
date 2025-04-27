@@ -1,7 +1,7 @@
 python src/main.py mtable predict \
     --model src/cfg/models/dlatsr-mtable.yaml \
     --source datasets/ICDAR2013/wired_test_images \
-    --model_path checkpoints/WTW/dla/model_best.pth \
+    --model_path checkpoints/WTW/dla/model_last.pth \
     --device 0,1 \
     --save \
     --save_result \

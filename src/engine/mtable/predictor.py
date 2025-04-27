@@ -35,7 +35,7 @@ class MTablePredictor(TablePredictor):
             sp = output["sp"]
 
             # Output the inference result graph
-            np.save(os.path.join(self.args.save_dir, meta["image_name"]), lc.detach().cpu()[0].numpy())
+            # np.save(os.path.join(self.args.save_dir, meta["image_name"]), lc.detach().cpu()[0].numpy())
 
             # Cell fractions are reordered if they are modified
             is_modify = False
