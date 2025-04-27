@@ -106,7 +106,7 @@ where `${BACKBONE}` should be replaced with “dla” or “star” to indicate 
 
 We have prepared the training scripts. Note that ${BACKBONE} needs to be replaced with “dla” and “star” before running the script. The command line is as follows:
 ```
-cd TableCenterNet/src
+cd TableCenterNet
 
 # Fine-tuning ICDAR2013
 sh scripts/train/${BACKBONE}/train_icdar2013.sh
@@ -154,8 +154,15 @@ cd TableCenterNet
 
 python src/main.py mtable val --only_eval --label ${LABEL_PATH} --project ${PROJECT_FOLDER} --name ${EXP_NAME}
 
-# Example: We validate the test results on the WTW dataset
-# python src/main.py mtable val --only_eval --label datasets/WTW/labels/wired_test.json --project Test/WTW --name dla
+### Example: We validate the test results on the ICDAR2013 dataset
+# Test first
+sh scripts/test/dla/test_icdar2013_wired.sh 
+# Evaluate
+python src/main.py mtable val \
+  --only_eval \
+  --label datasets/ICDAR2013/labels/wired_test.json \
+  --project Test/ICDAR2013 \
+  --name dla_wired
 ```
 
 After the evaluation, `evaluate_results.md` and `evaluate_results.xlsx` will be generated in the `./${PROJECT_FOLDER}/${EXP_NAME}/` folder to save the results.

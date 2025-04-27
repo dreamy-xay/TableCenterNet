@@ -1,6 +1,6 @@
-python main.py mtable train \
-    --model cfg/models/startsr-mtable.yaml \
-    --data cfg/datasets/TG24K.yaml \
+python src/main.py mtable train \
+    --model src/cfg/models/startsr-mtable.yaml \
+    --data src/cfg/datasets/TG24K.yaml \
     --epochs 200 \
     --device 0,1 \
     --master_batch -1 \

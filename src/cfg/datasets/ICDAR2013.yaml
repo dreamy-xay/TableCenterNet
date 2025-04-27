@@ -3,7 +3,9 @@ path: # Path configuration
 
   reset_data_dir: null # If the file directory is set, the dirs.dataset_name will be overwritten, that is, the path where the dataset is located is dirs.reset_data_dir/ICDAR2013, and the override note must be an absolute path
 
-  train: "val.json" # Training tag file
+  reset_images_dir: null # If this subdirectory is set, the image directory in the dataset will be reset to dirs.dataset_name/reset_images_dir, otherwise it will default to dirs.dataset_name/images
+
+  train: "train.json" # Training tag file
   val: "test.json" # Verify the label file
   test: "test.json" # Test the tag file
 
@@ -11,7 +13,7 @@ model: # Model-related configurations
   down_ratio: 4 # The image is downsampled to reduce the amount of computation
 
 dataset: # Dataset related configurations
-  resolution: [768, 768] # The final input image resolution of the dataset
+  resolution: [1024, 1024] # The final input image resolution of the dataset
 
 limit: # Target Restriction Configuration
   max_objects: 200 # The maximum number of objects (cells) that each image can contain

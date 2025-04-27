@@ -1,6 +1,6 @@
-python main.py mtable train \
-    --model cfg/models/dlatsr-mtable.yaml \
-    --data cfg/datasets/WTW.yaml \
+python src/main.py mtable train \
+    --model src/cfg/models/dlatsr-mtable.yaml \
+    --data src/cfg/datasets/WTW.yaml \
     --epochs 200 \
     --device 0,1 \
     --master_batch -1 \
