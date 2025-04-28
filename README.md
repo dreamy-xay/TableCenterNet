@@ -11,7 +11,6 @@
 ## Abstract
 Table structure recognition aims to parse tables in unstructured data into machine-understandable formats. Recent methods address this problem through a two-stage process or optimized one-stage approaches. However, these methods either require multiple networks to be serially trained and perform more time-consuming sequential decoding, or rely on complex post-processing algorithms to parse the logical structure of tables. They struggle to balance cross-scenario adaptability, robustness, and computational efficiency. In this paper, we propose a one-stage end-to-end table structure parsing network called TableCenterNet. This network unifies the prediction of table spatial and logical structure into a parallel regression task for the first time, and implicitly learns the spatial-logical location mapping laws of cells through a synergistic architecture of shared feature extraction layers and task-specific decoding. Compared with two-stage methods, our method is easier to train and faster to infer. Experiments on benchmark datasets show that TableCenterNet can effectively parse table structures in diverse scenarios and achieve state-of-the-art performance on the TableGraph-24k dataset. 
 
-# Getting Started
 ## Installation
 ### Requirements
 Create the environment from the environment.yml file `conda env create --file environment.yml` or install the software needed in your environment independently.
@@ -44,7 +43,7 @@ dependencies:
       - tqdm==4.66.5
 ```
 
-### Installing SciTSR
+### SciTSR
 This package is mainly used to evaluate adjacency relationship.
 
 ```
@@ -56,21 +55,25 @@ pip install dist/scitsr-0.0.1-py3-none-any.whl
 
 ## Preparation
 ### Datasets
-- Doownload datasets from [Releases](https://github.com/dreamy-xay/releases/tag/v1.0).
-- Put `datasets.tar.gz` in **"./datasets/"** and unzip it.
+- Doownload datasets from [Google Drive](https://drive.google.com/drive/folders/1p-M_BHWF2_NBeAde_apwSC97bqaXdMsk) or [Baidu Netdisk](https://pan.baidu.com/s/1fLzDt8VMPZBOzcDBuUq3zw?pwd=cymx).
+- Put `ICDAR2013.tar.gz`, `WTW.tar.gz`, and `TG24K.tar.gz` in **"./datasets/"** and extract them.
 ```
 cd TableCenterNet/datasets
-tar -zxvf datasets.tar.gz
+tar -zxvf ICDAR2013.tar.gz
+tar -zxvf WTW.tar.gz
+tar -zxvf TG24K.tar.gz
 ## The './datasets/' folder should look like:
-checkpoints
+datasets
 ├─── ICDAR2013
 ├─── WTW
 └─── TG24K
 ```
 
+You can also download the official version of the datasets ([ICDAR2013](https://huggingface.co/datasets/bsmock/ICDAR-2013.c), [WTW](https://github.com/wangwen-whu/WTW-Dataset), [TableGraph-24k](https://github.com/xuewenyuan/TGRNet)) and convert them to COCO format using scripts in **"./scripts/dataset/"**.
+
 ### Pretrained Models
-- Download pretrained models from [Releases](https://github.com/dreamy-xay/TableCenterNet/releases/tag/v1.0).
-- Put `checkpoints.tar.gz` in **"./checkpoints/"** and unzip it.
+- Download pretrained models from [Google Drive](https://drive.google.com/file/d/1OTS8Xkw0IKo0tC4uCAQOmhV4hgZ-KEuv) or [Baidu Netdisk](https://pan.baidu.com/s/1sST0HUnBzI_92kG6OiOUFQ?pwd=am7s).
+- Put `checkpoints.tar.gz` in **"./checkpoints/"** and extract it.
 ```
 cd TableCenterNet/checkpoints
 tar -zxvf checkpoints.tar.gz
