@@ -6,15 +6,35 @@ Version:
 Autor: dreamy-xay
 Date: 2024-12-06 11:24:44
 LastEditors: dreamy-xay
-LastEditTime: 2024-12-31 17:00:21
+LastEditTime: 2024-12-30 11:08:32
 '''
 import os
 import json
 from tqdm import tqdm
 import argparse
 import cv2
+import numpy as np
 
-class SCITSR2COCO:
+def padding_image(image, pad_value=None, pixel_value=0):
+    if pad_value is None or pad_value == 0:
+        return image
+
+    if isinstance(pad_value, int):
+        pad_value = (pad_value, pad_value, pad_value, pad_value)
+
+    h, w = image.shape[:2]
+
+    new_h = h + pad_value[0] + pad_value[2]
+    new_w = w + pad_value[1] + pad_value[3]
+
+    image_padded = np.zeros((new_h, new_w, 3), dtype=image.dtype)
+    if pixel_value != 0:
+        image_padded.fill(pixel_value)
+    image_padded[pad_value[0] : pad_value[0] + h, pad_value[1] : pad_value[1] + w] = image
+
+    return image_padded
+
+class ICDAR2COCO:
     def __init__(self):        
         self.coco = {'images': [], 'type': 'instances', 'annotations': [], 'categories': []}
 
@@ -81,59 +101,49 @@ class SCITSR2COCO:
                 
         self.coco['annotations'].append(annotation_item)
 
-    def parse(self, data_dir, mode="comp"): # mode: ['comp', 'train', 'test']
-        dir_name = "train" if mode == "train" else "test"
+    def parse_json_files(self, image_dir_path, json_dir_path, padding_image_margin=0):
+        if padding_image_margin > 0:
+            pim_imags_path = os.path.join(os.path.dirname(json_dir_path), ".." , f"padding{padding_image_margin}_images")
+            if not os.path.exists(pim_imags_path):
+                os.makedirs(pim_imags_path)
         
-        image_dir = os.path.join(data_dir, dir_name, 'img')
-        chunk_dir = os.path.join(data_dir, dir_name, 'chunk')
-        structure_dir = os.path.join(data_dir, dir_name, 'structure')
-        
-        # 获取文件名列表
-        if mode == "comp":
-            with open(os.path.join(data_dir, 'SciTSR-COMP.list')) as f:
-                file_name_list = f.read().splitlines()
-        elif mode == "train" or mode == "test":
-            file_name_list = [os.path.splitext(json_file_path)[0] for json_file_path in os.listdir(structure_dir) if json_file_path.endswith('.json') and os.path.isfile(os.path.join(structure_dir, json_file_path))]
-        else:
-            raise Exception("Invalid mode: {}".format(mode))
+        # Get the list of json files
+        json_file_paths = [json_file_path for json_file_path in os.listdir(json_dir_path) if json_file_path.endswith('.json') and os.path.isfile(os.path.join(json_dir_path, json_file_path))]
         
         current_category_id = self.add_cat_item("box")
 
-        # 遍历所有文件
-        for file_name in tqdm(file_name_list, desc="Parse Xml Files", unit="file"):
-            chunk_file = os.path.join(chunk_dir, file_name + '.chunk')
-            structure_file = os.path.join(structure_dir, file_name + '.json')
-            image_file = os.path.join(image_dir, file_name + '.png')
+        # Go through all files
+        for json_file_path in tqdm(json_file_paths, desc="Parse Xml Files", unit="file"):
+            current_image_id = None
             
-            if not os.path.exists(image_file) or not os.path.exists(structure_file) or not os.path.exists(chunk_file):
-                print(f"File not found: {file_name}")
+            file_name = os.path.splitext(os.path.basename(json_file_path))[0] + '.jpg'
+
+            json_file = os.path.join(json_dir_path, json_file_path)
+            image_file = os.path.join(image_dir_path, file_name)
+            
+            if not os.path.exists(image_file):
                 continue
             
             image = cv2.imread(image_file)
+            if padding_image_margin > 0:
+                image = padding_image(image, padding_image_margin)
+                cv2.imwrite(os.path.join(pim_imags_path, file_name), image)
+            
             height, width = image.shape[:2]
             size = {'width': width, 'height': height}
             
-            current_image_id = self.add_image_item(file_name + ".png", size)
+            current_image_id = self.add_image_item(file_name, size)
             
-            with open(structure_file, 'r') as f:
-                structure = json.load(f)
-            with open(chunk_file, 'r') as f:
-                chunk = json.load(f)
+            with open(json_file, 'r') as f:
+                data = json.load(f)
 
-            for cell in structure["cells"]:
-                cell_id = cell["id"]
-                if cell_id == 0:
-                    continue
-                cell_id = int(cell_id) - 1
-                
-                try:
-                    pos = chunk["chunks"][cell_id]["pos"]
-                except:
-                    raise Exception(f"Cell {cell_id} not found in chunk file {chunk_file}")
-                xmin = min(pos[0::2])
-                ymin = min(pos[1::2])
-                xmax = max(pos[0::2])
-                ymax = max(pos[1::2])
+            for cell in data["cells"]:
+                xmin, ymin, xmax, ymax = cell['xmin'], cell['ymin'], cell['xmax'], cell['ymax']
+                if padding_image_margin > 0:
+                    xmin += padding_image_margin
+                    ymin += padding_image_margin
+                    xmax += padding_image_margin
+                    ymax += padding_image_margin
                 
                 seg = [xmin, ymin, xmax, ymin, xmax, ymax, xmin, ymax]
                 logic_axis = [cell['start_col'], cell['end_col'], cell['start_row'], cell['end_row']]
@@ -171,18 +181,20 @@ def vis_result(coco_json, images_dir, shows_dir):
 
 if __name__ == '__main__':
     arg_parser = argparse.ArgumentParser()
-    arg_parser.add_argument("--data_dir", required=True, type=str)
+    arg_parser.add_argument("--input_json_dir", required=True, type=str)
+    arg_parser.add_argument("--input_image_dir", required=True, type=str)
     arg_parser.add_argument("--output_json_path", required=True, type=str)
-    arg_parser.add_argument("--mode", default="comp", type=str)
     arg_parser.add_argument("--vis_path", default="", type=str)
+    arg_parser.add_argument("--pim", default=0, type=int)
     args = arg_parser.parse_args()
     
-    coco_data = SCITSR2COCO().parse(args.data_dir, args.mode).get_coco_data()
+    coco_data = ICDAR2COCO().parse_json_files(args.input_image_dir, args.input_json_dir, args.pim).get_coco_data()
     
     with open(args.output_json_path, 'w') as f:
         json.dump(coco_data, f)
     
     if args.vis_path:
-        vis_result(args.output_json_path, os.path.join(args.data_dir, 'img'), args.vis_path)
+        images_dir = os.path.join(os.path.dirname(args.input_json_dir), ".." , f"padding{args.pim}_images") if args.pim > 0 else args.input_image_dir
+        vis_result(args.output_json_path, images_dir, args.vis_path)
     
 

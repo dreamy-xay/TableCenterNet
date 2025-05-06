@@ -6,7 +6,7 @@ Version:
 Autor: dreamy-xay
 Date: 2024-12-06 11:24:44
 LastEditors: dreamy-xay
-LastEditTime: 2024-12-06 12:27:34
+LastEditTime: 2025-05-06 21:22:52
 '''
 import xml.etree.ElementTree as ET
 import os
@@ -78,10 +78,10 @@ class WTW2COCO:
         self.coco['annotations'].append(annotation_item)
 
     def parse_xml_files(self, xml_dir_path):
-        # 获取xml文件列表
+        # Get the list of XML files
         xml_file_paths = [xml_file_path for xml_file_path in os.listdir(xml_dir_path) if xml_file_path.endswith('.xml') and os.path.isfile(os.path.join(xml_dir_path, xml_file_path))]
 
-        # 遍历所有文件
+        # Go through all files
         for xml_file_path in tqdm(xml_file_paths, desc="Parse Xml Files", unit="file"):
             size = {'width': None, 'height': None, 'depth': None}
             current_image_id = None

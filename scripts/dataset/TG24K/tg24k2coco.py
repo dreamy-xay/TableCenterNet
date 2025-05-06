@@ -89,14 +89,14 @@ class TG24K2COCO:
         coord_dir = os.path.join(data_dir, "graph_node")
         structure_dir = os.path.join(data_dir, "graph_target")
 
-        # 获取文件名列表
+        # Get a list of file names
         with open(os.path.join(data_dir, f"{mode}.txt")) as f:
             file_name_list = f.read().splitlines()
             file_name_list = [os.path.splitext(os.path.basename(file_name.split()[0]))[0] for file_name in file_name_list]
 
         current_category_id = self.add_cat_item("box")
 
-        # 遍历所有文件
+        # Go through all files
         for file_name in tqdm(file_name_list, desc="Parse Xml Files", unit="file"):
             coord_file = os.path.join(coord_dir, file_name + "_node.csv")
             structure_file = os.path.join(structure_dir, file_name + "_target.csv")
@@ -146,14 +146,14 @@ class TG24K2COCO:
         image_dir = os.path.join(data_dir, "image")
         label_dir = os.path.join(data_dir, "gt")
 
-        # 获取文件名列表
+        # Get a list of file names
         with open(os.path.join(data_dir, f"{mode}.txt")) as f:
             file_name_list = f.read().splitlines()
             file_name_list = [os.path.basename(file_name.split()[0]) for file_name in file_name_list]
 
         current_category_id = self.add_cat_item("box")
 
-        # 遍历所有文件
+        # Go through all files
         for file_name in tqdm(file_name_list, desc="Parse Gt Files", unit="file"):
             label_file = os.path.join(label_dir, file_name)
 
@@ -225,19 +225,19 @@ if __name__ == "__main__":
     arg_parser.add_argument("--pkl", action="store_true")
     args = arg_parser.parse_args()
 
-    # 解析数据
+    # Parse data
     if args.pkl:
         coco_data = TG24K2COCO().parse_pkl(args.data_dir, args.mode).get_coco_data()
     else:
         coco_data = TG24K2COCO().parse(args.data_dir, args.mode).get_coco_data()
 
-    # 保存 json 文件
+    # Save the json file
     output_json_dir = os.path.dirname(args.output_json_path)
     if not os.path.exists(output_json_dir):
         os.makedirs(os.path.dirname(args.output_json_path), exist_ok=True)
     with open(args.output_json_path, "w") as f:
         json.dump(coco_data, f)
 
-    # 可视化结果
+    # Visualize the results
     if args.vis_path:
         vis_result(args.output_json_path, os.path.join(args.data_dir, "image"), args.vis_path)
