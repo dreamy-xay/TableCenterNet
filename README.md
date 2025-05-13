@@ -1,6 +1,6 @@
 <div id="top" align="center">
 
-# Towards One-Stage End-to-End Table Structure Recognition with Parallel Regression for Diverse Scenarios
+# TableCenterNet: A one-stage network for table structure recognition
 
   Anyi Xiao and Cihui Yang* </br>
 
